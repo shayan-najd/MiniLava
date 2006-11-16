@@ -1,0 +1,83 @@
+#!/bin/sh
+#----------------------------------------------------------------
+#- Wrapper for prover
+#- to be used by the Lava system
+#----------------------------------------------------------------
+
+#- This file gets `File' as an argument, and produces the file
+#- File.out, containing the output of prover.
+
+trap 'echo "(^C) \c"' INT
+
+#----------------------------------------------------------------
+#- Variables
+
+#- options
+
+File="$1"
+shift
+ShowTime="no"
+
+if [ "$1" = "-showTime" ]
+then
+  ShowTime="yes"
+  shift
+fi
+
+Args="$*"
+
+#- derived
+
+Output="`dirname $File`/prover.out"
+
+#- constants
+
+LM_LICENSE_FILE=/usr/lic/np-tools/flexlm/license.dat
+export LM_LICENSE_FILE
+
+Prover="/usr/lic/prover3116/prove"
+Time="/tmp/lava-proof-time-$$"
+
+#----------------------------------------------------------------
+#- Running Prover
+
+prover_()
+{
+  cat $File | /usr/bin/time $Prover -taut -sub 4 -x 1 -avb -ais $Args -model first 2> $Time
+}
+
+prover_ > $Output
+
+#----------------------------------------------------------------
+#- Time
+
+seconds()
+{
+  if [ "$ShowTime" = "yes" ]
+  then
+    echo "(t=$2) \c"
+  fi
+}
+
+seconds `tail -3 $Time`
+cat $Time >> $Output
+rm $Time 2> /dev/null
+
+#----------------------------------------------------------------
+#- Check Output
+
+if grep valid $Output > /dev/null
+then
+  #- VALID
+  exit 0
+else if grep "counter model" $Output > /dev/null
+then
+  #- FALSIFIABLE
+  exit 2
+else
+  #- INDETERMINATE
+  exit 1
+fi; fi
+
+#----------------------------------------------------------------
+#- the end.

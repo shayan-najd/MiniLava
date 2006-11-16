@@ -1,0 +1,93 @@
+#!/bin/sh
+#----------------------------------------------------------------
+#- Wrapper for vis
+#- to be used by the Lava system
+#----------------------------------------------------------------
+
+#- This file gets `File' as an argument, and produces the file
+#- File.out, containing the output of prover.
+
+trap 'echo "(^C) \c"' INT
+
+#----------------------------------------------------------------
+#- Variables
+
+#- options
+
+cd "`dirname $1`"
+File1="`echo $1 | sed s!.*/!!`.mv"
+shift
+File2="`echo $1 | sed s!.*/!!`.mv"
+shift
+ShowTime="no"
+
+if [ "$1" = "-showTime" ]
+then
+  ShowTime="yes"
+  shift
+fi
+
+Args="$*"
+
+#- derived
+
+Output="$File1.out"
+
+#- constants
+
+#LM_LICENSE_FILE="/usr/lic/np-tools/flexlm/license.dat"
+#export LM_LICENSE_FILE
+
+Vis="vis"
+Time="/tmp/lava-proof-time-$$"
+
+#----------------------------------------------------------------
+#- Running vis
+
+input_()
+{
+  echo seq_verify $File1 $File2
+  echo time
+  echo quit
+}
+
+vis_()
+{
+  input_ | /usr/bin/time $Vis $Args 2> $Time
+}
+
+vis_ > $Output
+
+#----------------------------------------------------------------
+#- Time
+
+seconds()
+{
+  if [ "$ShowTime" = "yes" ]
+  then
+    echo "(t=$2) \c"
+  fi
+}
+
+seconds `grep -v command $Time`
+cat $Time >> $Output
+rm $Time 2> /dev/null
+
+#----------------------------------------------------------------
+#- Check Output
+
+if grep "Networks are sequentially equivalent." $Output > /dev/null
+then
+  #- VALID
+  exit 0
+else if grep "Networks are NOT sequentially equivalent." $Output > /dev/null
+then
+  #- FALSIFIABLE
+  exit 2
+else
+  #- INDETERMINATE
+  exit 1
+fi; fi
+
+#----------------------------------------------------------------
+#- the end.

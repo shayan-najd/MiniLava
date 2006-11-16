@@ -1,0 +1,77 @@
+#!/bin/sh
+#----------------------------------------------------------------
+#- Wrapper for eprover
+#- to be used by the Lava system
+#----------------------------------------------------------------
+
+#- This file gets `File' as an argument, and produces the file
+#- File.out, containing the output of prover.
+
+trap 'echo "(^C) \c"' INT
+
+#----------------------------------------------------------------
+#- Variables
+
+#- options
+
+cd "`dirname $1`"
+File="`echo $1 | sed s!.*/!!`"
+shift
+ShowTime="no"
+
+if [ "$1" = "-showTime" ]
+then
+  ShowTime="yes"
+  shift
+fi
+
+Args="--tptp-in --memory-limit=50 -tAuto -xAuto $*"
+
+#- derived
+
+Output="$File.out"
+
+#- constants
+
+Eprover="/.../chalmers.se/fs/cab/cs/work/proj/formal-methods/pub/bin/eprover"
+Time="/tmp/lava-proof-time-$$"
+
+#----------------------------------------------------------------
+#- Running Eprover
+
+eprover_()
+{
+  time $Eprover $Args < $File 2> $Time
+}
+
+eprover_ > $Output
+
+#----------------------------------------------------------------
+#- Time
+
+seconds()
+{
+  if [ "$ShowTime" = "yes" ]
+  then
+    echo "(t=$2) \c"
+  fi
+}
+
+seconds `tail -3 $Time`
+cat $Time >> $Output
+rm $Time 2> /dev/null
+
+#----------------------------------------------------------------
+#- Check Output
+
+if grep "# Proof found!" $Output > /dev/null
+then
+  #- VALID
+  exit 0
+else 
+  #- INDETERMINATE
+  exit 1
+fi
+
+#----------------------------------------------------------------
+#- the end.

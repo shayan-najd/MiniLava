@@ -1,0 +1,136 @@
+#!/bin/sh
+
+#----------------------------------------------------------------
+#- Environment variables
+
+LAVADIR="/users/cs/emax/Program/Lava/Lava2000"
+export LAVADIR
+
+LAVAHUGS="hugs -98 "
+LAVAGHC="ghc -fglasgow-exts -package lang"
+LAVAGHCMAKE="ghc --make -fglasgow-exts -package lang"
+
+#----------------------------------------------------------------
+#- Functions
+
+banner()
+{
+  echo "-- Lava 2000 -------------------------------------------------------------"
+}
+
+displayAllModulesFor()
+{
+  find "$LAVADIR/Modules" \
+    | grep -v "/Compilers/" \
+    | grep -v "/CVS/" \
+    | grep hs
+  
+  find "$LAVADIR/Modules/Compilers/$1" \
+    | grep -v "/CVS/" \
+    | grep hs
+}
+
+updateModulesFor()
+{
+  displayAllModulesFor "$1" | while read Module
+  do
+    if ln $Module "$LAVADIR/Modules/Compilers/$1/Objects/" 2> /dev/null
+    then
+      echo "detected `echo $Module | sed s!.*/Lava2000/!Lava2000/!`"
+    fi
+  done
+  
+  if grep "$LAVADIR" "$LAVADIR/Modules/LavaDir.hs" > /dev/null
+  then
+    echo "" > /dev/null
+  else
+    cat "$LAVADIR/Modules/LavaDir.hs" \
+      | sed "s!\{-INSERT LAVADIR-\}.*!\{-INSERT LAVADIR-\} "'"'"$LAVADIR"'"'"!" \
+      > "$LAVADIR/Modules/LavaDir.tmp"
+
+    cat "$LAVADIR/Modules/LavaDir.tmp" \
+      > "$LAVADIR/Modules/LavaDir.hs"
+
+    rm "$LAVADIR/Modules/LavaDir.tmp"
+  fi
+}
+
+words()
+{
+  while read Word Rest
+  do
+    if [ "$Word" != "" ]
+    then
+      echo "$Word"
+      echo $Rest | words
+    fi
+  done
+}
+
+compileModulesFor()
+{
+  cd "$LAVADIR/Modules/Compilers/$1/Objects/"
+  $2 LavaMain
+}
+
+#----------------------------------------------------------------
+#- Options
+
+WHAT="hugs"
+HUGS="$LAVAHUGS"
+MAKE="$LAVAGHCMAKE"
+COMPILER="Ghc"
+
+while [ 1 ]
+do
+  if [ "$1" = "-x" ]
+  then
+    HUGS="$2"
+    shift ; shift
+  elif [ "$1" = "-c" ]
+  then
+    WHAT="comp"
+    shift
+  elif [ "$1" = "-ghc" ]
+  then
+    WHAT="comp"
+    MAKE="$LAVAGHCMAKE"
+    COMPILER="Ghc"
+    shift
+  elif [ "$1" = "-u" ]
+  then
+    WHAT="update"
+    shift
+  else
+    break
+  fi
+done
+
+#----------------------------------------------------------------
+#- Modes
+
+banner
+
+if [ "$WHAT" = "hugs" ]
+then
+  $HUGS -P"$LAVADIR/Modules:$LAVADIR/Modules/Compilers/Hugs:" $*
+elif [ "$WHAT" = "comp" ]
+then
+  FILE="`echo $1 | sed 's/\.hs//'`"
+  shift
+  echo "Compiling: $MAKE $FILE $* ..."
+  $MAKE -i"$LAVADIR/Modules/Compilers/$COMPILER/Objects" "$FILE" $*
+elif [ "$WHAT" = "update" ]
+then
+  echo "Updating Ghc Modules ..."
+  updateModulesFor Ghc
+  echo "Compiling Ghc Modules ..."
+  compileModulesFor Ghc "$LAVAGHCMAKE" "$LAVAGHC"
+else
+  echo "$0: don't know how to <$WHAT>."
+  exit 0
+fi
+
+#----------------------------------------------------------------
+#- the end.
+

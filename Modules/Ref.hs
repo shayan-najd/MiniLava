@@ -20,15 +20,9 @@ module Ref
 
 import MyST
 
-import IOExts
-  ( IORef
-  , newIORef
-  , readIORef
-  , writeIORef
-  , fixIO
-  , unsafePerformIO
-  )
-
+import System.IO
+import System.IO.Unsafe
+import Data.IORef
 import UnsafeCoerce
   ( unsafeCoerce
   )

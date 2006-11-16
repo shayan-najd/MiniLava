@@ -12,16 +12,10 @@ module MyST
   , unsafeIOtoST
   )
  where
- 
-import IOExts
-  ( IORef
-  , newIORef
-  , readIORef 
-  , writeIORef
-  , fixIO
-  , unsafeInterleaveIO
-  , unsafePerformIO
-  )
+
+import System.IO
+import System.IO.Unsafe
+import Data.IORef
 
 newtype ST s a
   = ST (IO a)

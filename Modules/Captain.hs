@@ -28,12 +28,9 @@ import IOBuffering
   ( noBuffering
   )
 
-import IOExts
-  ( IORef
-  , newIORef
-  , readIORef
-  , writeIORef
-  )
+import System.IO
+import System.IO.Unsafe
+import Data.IORef
 
 import System
   ( system

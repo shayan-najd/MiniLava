@@ -28,12 +28,7 @@ import IOBuffering
   ( noBuffering
   )
 
-import IOExts
-  ( IORef
-  , newIORef
-  , readIORef
-  , writeIORef
-  )
+import Data.IORef
 
 import System
   ( system
@@ -51,7 +46,7 @@ fixit a =
      proveFile defsFile (writeDefinitions defsFile props)
  where
   defsFile = verifyDir ++ "/circuit.circ"
-  
+
 ----------------------------------------------------------------
 -- definitions
 
@@ -62,13 +57,13 @@ writeDefinitions file props =
      hPutStr han "INTERNALS{low := FALSE;}\n"
      hPutStr han "INTERNALS{high := TRUE;}\n"
      hPutStr han "LATCHES{initt := low (high);}\n"
-     
+
      let new =
            do n <- readIORef var
               let n' = n+1
               writeIORef var n'
               return ("w" ++ show n')
-         
+
          define v s =
            do hPutStr han (def ++ "\n")
           where
@@ -84,7 +79,7 @@ writeDefinitions file props =
                VarBool s     -> var s
                DelayBool x y -> latch x y
                _             -> wrong Error.NoArithmetic
-               
+
            prop form =
              "INTERNALS{" ++ v ++ " := " ++ form ++ ";}"
 

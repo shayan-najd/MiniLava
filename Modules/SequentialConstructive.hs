@@ -10,14 +10,8 @@ import Sequent
 import Generic
 import Error
 
-import IOExts
-  ( IORef
-  , newIORef
-  , readIORef
-  , writeIORef
-  , unsafeInterleaveIO
-  , unsafePerformIO
-  )
+import Data.IORef
+import System.IO.Unsafe
 
 ----------------------------------------------------------------
 -- wire datatype
@@ -53,7 +47,7 @@ simulateCon circ inps = unsafePerformIO $
 
         define rwire (DelayBool init next) =
           do delay rwire init next
-        
+
         define rwire (DelayInt init next) =
           do delay rwire init next
 
@@ -67,11 +61,11 @@ simulateCon circ inps = unsafePerformIO $
                case evalLazy sym' of
                  Nothing -> return ()
                  Just v  -> updateWire rwire time v
-        
+
           constant time =
             do propagate time
                addSet macro constant
-        
+
         delay rwire init next =
           do compWire next nextState
              compWire init initState
@@ -81,42 +75,42 @@ simulateCon circ inps = unsafePerformIO $
                case mv of
                  Nothing -> return ()
                  Just v  -> addSet macro (\t -> updateWire rwire t v)
-          
+
           initState time
             | time == time0 = do mv <- valueWire init time
                                  case mv of
                                    Nothing -> return ()
                                    Just v  -> updateWire rwire time v
             | otherwise     = do return ()
-        
+
         compWire rwire comp =
           do wire <- readIORef rwire
              writeIORef rwire (wire{ components = comp : components wire })
-        
+
         valueWire rwire time =
           do wire <- readIORef rwire
              return $
                case value wire of
                  v `At` time'
                    | time == time' -> Just v
-                 _                 -> Nothing        
-        
+                 _                 -> Nothing
+
         actualValueWire rwire time =
           do mv <- valueWire rwire time
              case mv of
                Just v  -> return v
                Nothing -> wrong Error.UndefinedWire
-        
+
         updateWire rwire time v =
           do wire <- readIORef rwire
              mv   <- valueWire rwire time
              case mv of
                Just v' | v =/= v'  -> wrong Error.BadCombinationalLoop
                        | otherwise -> return ()
-               
+
                _ -> do writeIORef rwire (wire{ value = v `At` time })
                        sequence_ [ addSet micro comp | comp <- components wire ]
-        
+
         Bool b1 =/= Bool b2 = b1 /= b2
         Int  n1 =/= Int  n2 = n1 /= n2
         _       =/= _       = True
@@ -128,7 +122,7 @@ simulateCon circ inps = unsafePerformIO $
          while (emptySet micro ($ time))
          s <- mmap (`actualValueWire` time) sr
          return (construct (symbol `fmap` s))
-    
+
     let res = takes inps outs
     return res
 

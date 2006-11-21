@@ -33,12 +33,7 @@ import IOBuffering
   ( noBuffering
   )
 
-import IOExts
-  ( IORef
-  , newIORef
-  , readIORef
-  , writeIORef
-  )
+import Data.IORef
 
 import System
   ( system
@@ -78,7 +73,7 @@ searchOptVal :: Read a => [Option] -> (a -> Option) -> a
 searchOptVal options what = search (options ++ defaultValues)
  where
   opt' = what undefined
- 
+
   search [] = wrong Error.Internal_OptionNotFound
   search (opt:opts)
     | sameOption opt opt' = read (words (show opt) !! 1)
@@ -97,7 +92,7 @@ verifyWith :: Checkable a => [Option] -> a -> IO ProofResult
 verifyWith options a =
   do checkVerifyDir
      noBuffering
-     
+
      (props,model) <- properties a
      (states,pins) <- writeDefinitions defsFile props
      res <- proveAll defsFile states pins options
@@ -109,7 +104,7 @@ verifyWith options a =
   defsFile = verifyDir ++ "/" ++ nameOpt ++ ".defs"
   outFile  = verifyDir ++ "/prover.out"
   nameOpt  = searchOptVal options Name
-  
+
 ----------------------------------------------------------------
 -- proving
 
@@ -119,23 +114,23 @@ proveAll defsFile states quests options =
     [[]] ->
       do putStrLn "Nothing to prove! ... Valid."
          return Valid
-         
+
     [[(labels, ini, assumps, obligs)]] ->
       do proveUnit labels ini assumps obligs
-    
+
     _ ->
       do tryAll actions
  where
   depths
     | incrOpt && not (null states) = [depthOpt ..]
     | otherwise                    = [depthOpt]
-  
+
   steps d
     | null states = [ ([],                  True,  [],     [1]) ]
     | otherwise   = [ (["base " ++ show d], True,  [],     [1..d])
                     , (["step " ++ show d], False, [1..d], [d+1])
                     ]
-  
+
   pins (labels, ini, assumps, obligs) n
     | n == 1    = [ (labels, ini, map (pin 1) assumps, map (pin 1) obligs) ]
     | otherwise = [ ( labels ++ ["pin " ++ show p]
@@ -148,10 +143,10 @@ proveAll defsFile states quests options =
                   ]
    where
     pin p a = (a, p)
-  
+
   actions =
     [ concatMap (`pins` quests) (steps d) | d <- depths ]
-  
+
   nameOpt  = searchOptVal  options Name
   depthOpt = searchOptVal  options Depth
   incrOpt  = searchOptBool options Increasing
@@ -159,10 +154,10 @@ proveAll defsFile states quests options =
 
   tryAll [] =
     do result Indeterminate
-  
+
   tryAll ([] : rest) =
     do result Valid
-  
+
   tryAll (((labels, ini, assumps, obligs) : tries) : rest) =
     do r <-  proveUnit labels ini assumps obligs
        case r of
@@ -170,7 +165,7 @@ proveAll defsFile states quests options =
          Falsifiable | not ini -> tryAll rest
                      | ini     -> result Falsifiable
          Indeterminate         -> result Indeterminate
-  
+
   result r =
     do putStrLn "--"
        putStrLn ("Result: " ++ show r ++ ".")
@@ -202,7 +197,7 @@ proveAll defsFile states quests options =
               | obl <- obligs
               ]
          appendFooter
-    
+
     mainFile =
       verifyDir ++ "/" ++ clean (nameOpt ++ ".prov" ++ concatMap ("." ++) labels)
 
@@ -250,7 +245,7 @@ proveAll defsFile states quests options =
 
     restrictStates =
       [ notEqual (t-1) (t'-1) states | t <- times, t' <- times, t' > t ]
-    
+
     notEqual t t' states =
       "OR(" ++ concat (intersperse ", " [ "~(" ++ s ++ "_t" ++ show t ++ " "
                                           ++ eq ++ " " ++ s ++ "_t" ++ show t' ++ ")"
@@ -304,13 +299,13 @@ writeDefinitions file props =
   do han <- openFile file WriteMode
      var <- newIORef 0
      sts <- newIORef []
-     
+
      let new =
            do n <- readIORef var
               let n' = n+1
               writeIORef var n'
               return (Now ("w" ++ show n'))
-         
+
          define v s =
            do hPutStr han (def ++ ";\n")
               case s of
@@ -339,10 +334,10 @@ writeDefinitions file props =
 
                VarBool s  -> prop $ op0 (Now s)
                VarInt  s  -> arit $ op0 (Now s)
-            
+
                DelayBool x y -> iff ini (prop (op0 x)) (prop (op0 (pre y)))
                DelayInt  x y -> iff ini (arit (op0 x)) (arit (op0 (pre y)))
-               
+
            prop form =
              "(" ++ show v ++ " <-> (" ++ form ++ "))"
 
@@ -352,15 +347,15 @@ writeDefinitions file props =
            iff c x y =
              "(" ++ op0 c ++ " -> " ++ x ++ ") & (~"
                  ++ op0 c ++ " -> " ++ y ++ ")"
-                     
+
            state s =
              do xs <- readIORef sts
                 writeIORef sts (s:xs)
-           
+
            op0 v      = show v
            op1 op v   = op ++ show v
            op2 op v w = "(" ++ show v ++ " " ++ op ++ " " ++ show w ++ ")"
-           
+
            opl fun con []  nul = nul
            opl fun con [x] nul = show x
            opl fun con xs  nul =
@@ -430,7 +425,7 @@ displayModel file showModel =
 
   makeTable [] table =
     table
-  
+
   makeTable ((v,val):inps) table =
     makeTable inps (extend name (read time) val table)
    where
@@ -441,13 +436,13 @@ displayModel file showModel =
 
   extend name time val [] =
     extend name time val [(name, [])]
-  
+
   extend name time val (entry@(name',vals):table)
     | name == name' = updated : table
     | otherwise     = entry : extend name time val table
    where
     updated = (name', make (time - 1) vals ++ [val] ++ drop time vals)
-    
+
     make 0 xs     = []
     make n []     = make n ["?"]
     make n (x:xs) = x : make (n-1) xs
@@ -476,7 +471,7 @@ checkVerifyDir :: IO ()
 checkVerifyDir =
   do system ("mkdir -p " ++ verifyDir)
      return ()
-     
+
 ----------------------------------------------------------------
 -- the end.
 

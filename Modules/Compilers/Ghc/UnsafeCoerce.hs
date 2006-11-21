@@ -3,14 +3,9 @@ module UnsafeCoerce
   )
  where
 
-import IOExts
-  ( IORef
-  , newIORef
-  , readIORef
-  , writeIORef
-  , unsafePerformIO
-  )
-  
+import Data.IORef
+import System.IO.Unsafe
+
 unsafeCoerce :: a -> b
 unsafeCoerce a = unsafePerformIO $
   do writeIORef ref a

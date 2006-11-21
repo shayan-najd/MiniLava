@@ -3,7 +3,7 @@ module Ref
   , ref       -- :: a     -> Ref a
   , deref     -- :: Ref a -> a
   , memoRef   -- :: (Ref a -> b) -> (Ref a -> b)
-  
+
   , TableIO   -- :: * -> * -> * ; Eq
   , tableIO   -- :: IO (TableIO a b)
   , extendIO  -- :: TableIO a b -> Ref a -> b -> IO ()
@@ -23,6 +23,7 @@ import MyST
 import System.IO
 import System.IO.Unsafe
 import Data.IORef
+
 import UnsafeCoerce
   ( unsafeCoerce
   )

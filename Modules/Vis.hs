@@ -32,12 +32,7 @@ import IOBuffering
   ( noBuffering
   )
 
-import IOExts
-  ( IORef
-  , newIORef
-  , readIORef
-  , writeIORef
-  )
+import Data.IORef
 
 import System
   ( system
@@ -57,7 +52,7 @@ vis a =
          (Nothing :: Maybe ()) (delay high (andl props)) (var "good")
  where
   defsFile = verifyDir ++ "/circuit.mv"
-  
+
 ----------------------------------------------------------------
 -- write Vis
 
@@ -92,14 +87,14 @@ writeDefinitions file name minp out out' =
   do firstHandle  <- openFile file1 WriteMode
      secondHandle <- openFile file2 WriteMode
      var <- newIORef 0
-     
+
      hPutStr firstHandle $ unlines $
        [ ".model " ++ name
        ] ++
        [ ".inputs " ++ v
        | VarBool v <- inps
        ]
-     
+
      hPutStr secondHandle $ unlines $
        [ ".outputs " ++ v
        | VarBool v <- outs'
@@ -110,14 +105,14 @@ writeDefinitions file name minp out out' =
        , ".reset initt"
        , "1"
        ]
-     
+
      let new =
            do n <- readIORef var
               let n' = n+1
                   v  = "w" ++ show n'
               writeIORef var n'
               return v
-         
+
          define v s =
            case s of
              Bool True     -> port (\_   -> True)  []
@@ -142,7 +137,7 @@ writeDefinitions file name minp out out' =
              Xor  (x:xs)   -> define (w 0) (Or xs)
                            >> define (w 1) (Inv (w 0))
                            >> define (w 2) (And [x, w 1])
-                           
+
                            >> define (w 3) (Inv x)
                            >> define (w 4) (Xor xs)
                            >> define (w 5) (And [w 3, w 4])
@@ -153,15 +148,15 @@ writeDefinitions file name minp out out' =
                                    (Nothing, 'i':_) -> input s
                                    _ -> return ()
              DelayBool x y -> delay x y
-             
+
              _             -> wrong Error.NoArithmetic
            where
             w i = v ++ "_" ++ show i
-            
+
             input s =
               do hPutStr firstHandle $
                    ".inputs " ++ s ++ "\n"
-            
+
             port oper args =
               do hPutStr secondHandle $
                       ".table "
@@ -175,7 +170,7 @@ writeDefinitions file name minp out out' =
              where
               line bs =
                 unwords (map (\b -> if b then "1" else "0") bs)
-              
+
               binary 0 = [[]]
               binary n = map (False:) xs ++ map (True:) xs
                where
@@ -192,16 +187,16 @@ writeDefinitions file name minp out out' =
                     ]
 
      outvs <- netlistIO new define (struct out)
-     
+
      sequence
        [ define v' (VarBool v)
        | (v,v') <- flatten outvs `zip` [ v' | VarBool v' <- outs' ]
        ]
-     
+
      hPutStr secondHandle $ unlines $
        [ ".end"
        ]
-     
+
      hClose firstHandle
      hClose secondHandle
      system ("cat " ++ file1 ++ " " ++ file2 ++ " > " ++ file)
@@ -210,9 +205,9 @@ writeDefinitions file name minp out out' =
  where
   file1 = file ++ "_1"
   file2 = file ++ "_2"
- 
+
   sigs x = map unsymbol . flatten . struct $ x
-  
+
   inps  = case minp of
             Just inp -> sigs inp
             Nothing  -> []

@@ -28,19 +28,14 @@ import Monad
   , liftM4
   , liftM5
   )
-  
+
 import List
   ( intersperse
   , transpose
   )
-  
-import IOExts
-  ( IORef
-  , newIORef
-  , readIORef
-  , writeIORef
-  , unsafeInterleaveIO
-  )
+
+import Data.IORef
+import System.IO.Unsafe
 
 ----------------------------------------------------------------
 -- Gen Monad
@@ -54,7 +49,7 @@ instance Functor Gen where
 instance Monad Gen where
   return a =
     Gen (\t -> a)
-  
+
   Gen m >>= k =
     Gen (\(Fork _ t1 t2) -> let a = m t1 ; Gen m2 = k a in m2 t2)
 
@@ -281,7 +276,7 @@ instance ShowModel () where
 instance (ShowModel a, ShowModel b) => ShowModel (a, b) where
   showModel model (a, b) =
     zipWith' (\x y -> "(" ++ x ++ "," ++ y ++ ")")
-      (showModel model a) (showModel model b) 
+      (showModel model a) (showModel model b)
 
 instance (ShowModel a, ShowModel b, ShowModel c) => ShowModel (a, b, c) where
   showModel model (a, b, c) =

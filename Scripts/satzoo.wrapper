@@ -33,7 +33,7 @@ Output="$File.out"
 
 #- constants
 
-Satzoo="/users/cs/group_fmethods/pub/bin/satzoo"
+Satzoo="/home/emax/Program/Satzoo/satzoo"
 Time="/tmp/lava-proof-time-$$"
 
 #----------------------------------------------------------------
@@ -72,7 +72,7 @@ else if grep "SATISFIABLE" $Output > /dev/null
 then
   #- FALSIFIABLE
   exit 2
-else 
+else
   #- INDETERMINATE
   exit 1
 fi; fi

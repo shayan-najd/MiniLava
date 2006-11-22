@@ -33,7 +33,7 @@ Output="$File.out"
 
 #- constants
 
-Smv="/users/cs/group_fmethods/pub/bin/smv/bin/smv"
+Smv="/home/emax/Program/SMV/bin/smv"
 Time="/tmp/lava-proof-time-$$"
 
 #----------------------------------------------------------------

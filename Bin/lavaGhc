@@ -1,1 +1,1 @@
-ghci -fglasgow-exts -i/home/emax/Work/Wired/Lava2000/Modules:/home/emax/Work/Wired/Lava2000/Modules/Compilers/Ghc: $1
+ghci -fglasgow-exts -i/home/emax/Program/Lava/Lava2000/Modules:/home/emax/Program/Lava/Lava2000/Modules/Compilers/Ghc: $1

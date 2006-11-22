@@ -1,1 +1,1 @@
-hugs -98 -P/home/emax/Work/Wired/Lava2000/Modules:/home/emax/Work/Wired/Lava2000/Modules/Compilers/Hugs:
+hugs -98 -P/home/emax/Work/Wired/Lava2000/Modules:/home/emax/Work/Wired/Lava2000/Modules/Compilers/Hugs: $1

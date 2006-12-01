@@ -1,6 +1,5 @@
 module Sequential
   ( simulateSeq
-  , simulateSeqIO
   )
  where
 
@@ -18,7 +17,6 @@ import MyST
   , writeSTRef
   , unsafeInterleaveST
   , runST
-  , stToIO
   )
 
 ----------------------------------------------------------------
@@ -94,7 +92,7 @@ simulateSeq circ inps = runST (
 
 relate :: Var s -> [Var s] -> ST s (S Symbol) -> ST s ()
 relate (rval, rwir) rs f =
-  do writeSTRef rwir $
+  do writeSTRef rwir $ 
        Wire{ dependencies = rs
            , kick = do b <- f
                        writeSTRef rval b
@@ -117,69 +115,10 @@ drive ((rval,rwir):rs) =
           driv2
 
 ----------------------------------------------------------------
--- simulate IO (copied-and-pasted)
-
-simulateSeqIO :: (Generic a, Generic b) => (a -> IO b) -> [a] -> IO [b]
-simulateSeqIO circ []   = return []
-simulateSeqIO circ inps =
-  do out <- circ (input inps)
-     stToIO (
-       do roots <- newSTRef []
-
-          let root r =
-                do rs <- readSTRef roots
-                   writeSTRef roots (r:rs)
-
-              new =
-                do rval <- newSTRef (error "val?")
-                   rwir <- newSTRef (error "wire?")
-                   return (rval, rwir)
-
-              define r s =
-                case s of
-                  DelayBool s s' -> delay s s'
-                  DelayInt  s s' -> delay s s'
-                  _ ->
-                    do relate r (arguments s) $
-                         eval `fmap` mmap (readSTRef . fst) s
-               where
-                delay ri@(rinit,_) r1@(pre,_) =
-                    do state <- newSTRef Nothing
-                       r2 <- new
-                       root r2
-
-                       relate r [ri] $
-                         do ms <- readSTRef state
-                            case ms of
-                              Just s  -> return s
-                              Nothing ->
-                                do s <- readSTRef rinit
-                                   writeSTRef state (Just s)
-                                   return s
-
-                       relate r2 [r,r1] $
-                         do s <- readSTRef pre
-                            writeSTRef state (Just s)
-                            return s
-
-          sr   <- netlistST new define (struct out)
-          rs   <- readSTRef roots
-          step <- drive (flatten sr ++ rs)
-
-          outs <- lazyloop $
-            do step
-               s <- mmap (fmap symbol . readSTRef . fst) sr
-               return (construct s)
-
-          let res = takes inps outs
-          return res
-       )
-
-----------------------------------------------------------------
 -- helper functions
 
 lazyloop :: ST s a -> ST s [a]
-lazyloop m =
+lazyloop m = 
   do a  <- m
      as <- unsafeInterleaveST (lazyloop m)
      return (a:as)

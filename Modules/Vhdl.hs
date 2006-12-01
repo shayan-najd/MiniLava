@@ -1,5 +1,6 @@
 module Vhdl
   ( writeVhdl
+  , writeVhdlIO
   , writeVhdlInput
   , writeVhdlInputOutput
   )
@@ -53,6 +54,32 @@ writeVhdlInputOutput name circ inp out =
 
 writeItAll :: (Generic a, Generic b) => String -> a -> b -> b -> IO ()
 writeItAll name inp out out' =
+  do noBuffering
+     putStr ("Writing to file \"" ++ file ++ "\" ... ")
+     writeDefinitions file name inp out out'
+     putStrLn "Done."
+ where
+  file = name ++ ".vhd"
+
+----------------------------------------------------------------
+-- write vhdl IO
+
+writeVhdlIO :: (Constructive a, Generic b) => String -> (a -> IO b) -> IO ()
+writeVhdlIO name circ =
+  do writeVhdlInputIO name circ (var "inp")
+
+writeVhdlInputIO :: (Generic a, Generic b) => String -> (a -> IO b) -> a -> IO ()
+writeVhdlInputIO name circ inp =
+  do out <- circ inp
+     writeVhdlInputOutputIO name out inp (symbolize "outp" out)
+
+writeVhdlInputOutputIO :: (Generic a, Generic b)
+                       => String -> b -> a -> b -> IO ()
+writeVhdlInputOutputIO name out inp out' =
+  do writeItAllIO name inp out out'
+
+writeItAllIO :: (Generic a, Generic b) => String -> a -> b -> b -> IO ()
+writeItAllIO name inp out out' =
   do noBuffering
      putStr ("Writing to file \"" ++ file ++ "\" ... ")
      writeDefinitions file name inp out out'

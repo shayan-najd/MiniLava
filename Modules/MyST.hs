@@ -6,10 +6,11 @@ module MyST
   , writeSTRef
   , runST
   , fixST
-  
+
   , unsafePerformST
   , unsafeInterleaveST
   , unsafeIOtoST
+  , stToIO
   )
  where
 
@@ -32,7 +33,7 @@ instance Monad (ST s) where
 
 newtype STRef s a
   = STRef (IORef a)
-  
+
 instance Eq (STRef s a) where
   STRef r1 == STRef r2 = r1 == r2
 
@@ -59,4 +60,7 @@ unsafeInterleaveST (ST io) = ST (unsafeInterleaveIO io)
 
 unsafeIOtoST :: IO a -> ST s a
 unsafeIOtoST = ST
+
+stToIO :: ST () a -> IO a
+stToIO (ST io) = io
 

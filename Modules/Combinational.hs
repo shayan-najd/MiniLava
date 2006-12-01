@@ -14,6 +14,7 @@ import MyST
   , readSTRef
   , writeSTRef
   , runST
+  , stToIO
   )
 
 ----------------------------------------------------------------
@@ -26,6 +27,26 @@ simulate circ inp = runST (
      let res = construct sa
      return res
   )
+ where
+  new =
+    newSTRef (wrong Error.CombinationalLoop)
+
+  define r s =
+    do s' <- mmap readSTRef s
+       writeSTRef r (eval s')
+
+----------------------------------------------------------------
+-- simulate IO
+
+simulateIO :: Generic b => (a -> IO b) -> a -> IO b
+simulateIO circ inp =
+  do out <- circ inp
+     stToIO (
+        do sr <- netlistST new define (struct out)
+           sa <- mmap (fmap symbol . readSTRef) sr
+           let res = construct sa
+           return res
+        )
  where
   new =
     newSTRef (wrong Error.CombinationalLoop)

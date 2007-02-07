@@ -24,8 +24,10 @@ import IO
   , hClose
   )
 
-import IOBuffering
-  ( noBuffering
+import System.IO
+  ( stdout
+  , BufferMode (..)
+  , hSetBuffering
   )
 
 import Data.IORef
@@ -53,7 +55,7 @@ writeVhdlInputOutput name circ inp out =
 
 writeItAll :: (Generic a, Generic b) => String -> a -> b -> b -> IO ()
 writeItAll name inp out out' =
-  do noBuffering
+  do hSetBuffering stdout NoBuffering
      putStr ("Writing to file \"" ++ file ++ "\" ... ")
      writeDefinitions file name inp out out'
      putStrLn "Done."

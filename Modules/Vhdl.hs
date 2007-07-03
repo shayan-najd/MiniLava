@@ -32,10 +32,8 @@ import System.IO
 
 import Data.IORef
 
-import System
-  ( system
-  , ExitCode(..)
-  )
+import System.Cmd (system)
+import System.Exit (ExitCode(..))
 
 ----------------------------------------------------------------
 -- write vhdl

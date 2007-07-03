@@ -18,7 +18,8 @@ import IOBuffering
 import Array
 import MyST
 import List(intersperse)
-import System(system, ExitCode(..))
+import System.Cmd (system)
+import System.Exit (ExitCode(..))
 
 ----------------------------------------------------------------------------------------------------
 -- options
@@ -51,7 +52,7 @@ iscWith m n a =
  where
 --  execute = "/Scripts/isc "
   execute = "isc "
-	    ++ netfile ++ " " 
+	    ++ netfile ++ " "
 	    ++ (m2par m) ++ " " ++ show n
   netfile = verifyDir ++ "/circuit.net"
 
@@ -66,7 +67,7 @@ iscWith m n a =
 data Sign a  = Pos a | Not a deriving (Show, Read)
 
 sneg (Pos x) = Not x
-sneg (Not x) = Pos x 
+sneg (Not x) = Pos x
 
 type NetList = Array Int (S (Sign Int))
 
@@ -149,7 +150,7 @@ table str =
 netlistST_ :: Sequent f => (S v -> ST s v) -> f Symbol -> ST s (f v)
 netlistST_ define symbols =
   do tab <- tableST
-     
+
      let gather (Symbol sym) =
            do visited <- findST tab sym
               case visited of
@@ -158,7 +159,7 @@ netlistST_ define symbols =
                               extendST tab sym v
                               s <- mmap gather (deref sym)
                               define s
-           
+
       in mmap gather symbols
 
 

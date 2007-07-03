@@ -11,6 +11,7 @@ module Lava
   , module Vis
   , module Fixit
   , module Smv
+  , module Satzoo
   , module Property
   , module Retime
   , module Vhdl
@@ -29,6 +30,7 @@ import Verification
 import Vis
 import Fixit
 import Smv
+import Satzoo
 import Property
 import Retime
 import Vhdl

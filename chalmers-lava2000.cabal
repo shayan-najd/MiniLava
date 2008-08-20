@@ -1,5 +1,6 @@
 name:                chalmers-lava2000
-version:             1.0
+version:             1.0.1
+homepage:            http://www.cs.chalmers.se/~koen/Lava/
 synopsis:            Hardware description library
 description:         Hardware description library
 category:            Hardware
@@ -11,7 +12,7 @@ maintainer:          Emil Axelsson <emax@chalmers.se>
 cabal-version:       >= 1.2
 build-type:          Simple
 tested-with:         GHC ==6.8.3
-data-files:          README, INSTALL
+data-files:          README, INSTALL, Doc/tutorial.ps
 extra-source-files:  Vhdl/lava.vhd, Scripts/satzoo.wrapper, Scripts/smv.wrapper
 
 library

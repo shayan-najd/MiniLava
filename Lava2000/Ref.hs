@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -cpp #-}
-
 module Lava2000.Ref
   ( Ref       -- * -> * ; Eq, Show
   , ref       -- :: a     -> Ref a

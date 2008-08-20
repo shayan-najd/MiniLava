@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-overlapping-patterns #-}
-
 module Lava2000.Error
   ( Error(..)
   , wrong

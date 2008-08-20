@@ -1,1 +1,0 @@
-$MY_GHC/ghc -fglasgow-exts --make -o Main -i/home/emax/Program/Lava2000/Modules: $1

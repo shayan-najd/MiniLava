@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-missing-methods #-}
-
 module Lava2000.Operators where
 
 import Lava2000.Signal

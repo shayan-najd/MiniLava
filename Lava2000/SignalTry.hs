@@ -1,3 +1,5 @@
+module Lava2000.SignalTry where
+
 import Lava2000.Ref
 
 data Signal a

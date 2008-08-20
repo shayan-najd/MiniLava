@@ -8,7 +8,7 @@ import Lava2000.Ref
 import Lava2000.Signal
 import Lava2000.Generic
 
-import Lava2000.Lava
+import Lava2000.Property
 import Lava2000.LavaDir
 import Lava2000.Sequent
 import Lava2000.Netlist

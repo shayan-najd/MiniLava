@@ -3,7 +3,7 @@ version:             1.0.1
 homepage:            http://www.cs.chalmers.se/~koen/Lava/
 synopsis:            Hardware description library
 description:         Hardware description library
-category:            Hardware
+category:            Language, Hardware
 license:             BSD3
 license-file:        LICENSE
 copyright:           (c) 2008. Koen Claessen <koen@chalmers.se>

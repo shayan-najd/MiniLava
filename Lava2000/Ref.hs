@@ -1,20 +1,20 @@
 module Lava2000.Ref
-  ( Ref       -- * -> * ; Eq, Show
-  , ref       -- :: a     -> Ref a
-  , deref     -- :: Ref a -> a
-  , memoRef   -- :: (Ref a -> b) -> (Ref a -> b)
+  ( Ref
+  , ref
+  , deref
+  , memoRef
 
-  , TableIO   -- :: * -> * -> * ; Eq
-  , tableIO   -- :: IO (TableIO a b)
-  , extendIO  -- :: TableIO a b -> Ref a -> b -> IO ()
-  , findIO    -- :: TableIO a b -> Ref a -> IO (Maybe b)
-  , memoRefIO -- :: (Ref a -> IO b) -> (Ref a -> IO b)
+  , TableIO
+  , tableIO
+  , extendIO
+  , findIO
+  , memoRefIO
 
-  , TableST   -- :: * -> * -> * -> * ; Eq
-  , tableST   -- :: ST (TableST s a b)
-  , extendST  -- :: TableST s a b -> Ref a -> b -> ST s ()
-  , findST    -- :: TableST s a b -> Ref a -> ST s (Maybe b)
-  , memoRefST -- :: (Ref a -> ST s b) -> (Ref a -> ST s b)
+  , TableST
+  , tableST
+  , extendST
+  , findST
+  , memoRefST
   )
  where
 

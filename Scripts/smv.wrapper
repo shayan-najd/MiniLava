@@ -33,7 +33,6 @@ Output="$File.out"
 
 #- constants
 
-Smv="/home/emax/Program/SMV/bin/smv"
 Time="/tmp/lava-proof-time-$$"
 
 #----------------------------------------------------------------
@@ -41,7 +40,7 @@ Time="/tmp/lava-proof-time-$$"
 
 smv_()
 {
-  /usr/bin/time $Smv $File $Args 2> $Time
+  /usr/bin/time $Lava2000_SMV $File $Args 2> $Time
 }
 
 smv_ > $Output

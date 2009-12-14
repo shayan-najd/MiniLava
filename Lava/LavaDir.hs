@@ -1,16 +1,7 @@
 module Lava.LavaDir where
 
-import System
-  ( getEnv
-  )
-
-import IO
-  ( try
-  )
+import Paths_chalmers_lava2000
 
 getLavaDir :: IO FilePath
-getLavaDir =
-  do ees <- try (getEnv "LAVADIR")
-     return $ case ees of
-                Left _  -> {-INSERT LAVADIR-} "/home/emax/Program/chalmers-lava2000/"
-                Right s -> s
+getLavaDir = getDataDir
+

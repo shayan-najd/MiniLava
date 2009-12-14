@@ -11,8 +11,7 @@ author:              Koen Claessen <koen@chalmers.se>
 maintainer:          Emil Axelsson <emax@chalmers.se>
 cabal-version:       >= 1.2
 build-type:          Simple
-data-files:          README, INSTALL, Doc/tutorial.ps
-extra-source-files:  Vhdl/lava.vhd, Scripts/satzoo.wrapper, Scripts/smv.wrapper
+data-files:          README, INSTALL, Doc/tutorial.ps, Vhdl/lava.vhd, Scripts/satzoo.wrapper, Scripts/smv.wrapper
 
 library
     exposed-modules:
@@ -56,7 +55,10 @@ library
                      Lava.Vis
                      Lava.Zchaff
 
-    build-Depends:   base, haskell98, process
+    other-modules:
+                     Paths_chalmers_lava2000
+
+    build-Depends:   base >= 3 && < 4, haskell98 >= 1 && < 1.1, process >= 1 && < 1.1
 
     extensions:      Rank2Types, ExistentialQuantification
     ghc-options:     -fno-warn-overlapping-patterns -fno-warn-missing-methods

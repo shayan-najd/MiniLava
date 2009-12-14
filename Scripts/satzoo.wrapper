@@ -33,7 +33,6 @@ Output="$File.out"
 
 #- constants
 
-Satzoo="/home/emax/Program/Satzoo/satzoo"
 Time="/tmp/lava-proof-time-$$"
 
 #----------------------------------------------------------------
@@ -41,7 +40,7 @@ Time="/tmp/lava-proof-time-$$"
 
 satzoo_()
 {
-  time $Satzoo $Args $File 2> $Time
+  time $Lava2000_Satzoo $Args $File 2> $Time
 }
 
 satzoo_ > $Output

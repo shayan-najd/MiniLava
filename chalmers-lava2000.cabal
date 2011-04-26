@@ -1,6 +1,5 @@
 name:                chalmers-lava2000
-version:             1.1.1
-homepage:            http://www.cs.chalmers.se/~koen/Lava/
+version:             1.1.2
 synopsis:            Hardware description library
 description:         Hardware description library
 category:            Language, Hardware
@@ -58,7 +57,7 @@ library
     other-modules:
                      Paths_chalmers_lava2000
 
-    build-Depends:   base >= 3 && < 4, haskell98 >= 1 && < 2, process >= 1 && < 2
+    build-Depends:   base >= 3 && < 5, haskell98 >= 1 && < 2, process >= 1 && < 2
 
     extensions:      Rank2Types, ExistentialQuantification
     ghc-options:     -fno-warn-overlapping-patterns -fno-warn-missing-methods

@@ -4,7 +4,7 @@ import Lava.Ref
 import Lava.Sequent
 import Lava.Error
 
-import List
+import Data.List
   ( transpose
   )
 

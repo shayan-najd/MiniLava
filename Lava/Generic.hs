@@ -10,7 +10,7 @@ import Lava.LavaRandom
   , next
   )
 
-import List
+import Data.List
   ( transpose
   )
 

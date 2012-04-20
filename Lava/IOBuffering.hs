@@ -1,6 +1,6 @@
 module Lava.IOBuffering where
 
-import IO
+import System.IO
   ( hSetBuffering
   , stdout
   , BufferMode(..)

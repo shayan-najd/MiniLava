@@ -6,7 +6,7 @@ module Lava.LavaRandom
   )
  where
 
-import Random
+import System.Random
   ( StdGen
   , newStdGen
   , next

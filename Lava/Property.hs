@@ -22,14 +22,14 @@ module Lava.Property
 import Lava.Signal
 import Lava.Generic
 
-import Monad
+import Control.Monad
   ( liftM2
   , liftM3
   , liftM4
   , liftM5
   )
 
-import List
+import Data.List
   ( intersperse
   , transpose
   )

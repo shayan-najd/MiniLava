@@ -16,13 +16,13 @@ import Lava.Property
 import Lava.Error
 import Lava.LavaDir
 
-import List
+import Data.List
   ( intersperse
   , isPrefixOf
   , nub
   )
 
-import IO
+import System.IO
   ( openFile
   , IOMode(..)
   , hPutStr

@@ -8,7 +8,7 @@ import Lava.Generic
 import Lava.Sequent
 import Lava.Netlist
 
-import List
+import Data.List
   ( isPrefixOf
   )
 

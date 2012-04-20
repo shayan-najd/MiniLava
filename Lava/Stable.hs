@@ -15,7 +15,7 @@ import Lava.MyST
   , unsafeInterleaveST
   )
 
-import List
+import Data.List
   ( isPrefixOf
   )
 

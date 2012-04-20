@@ -15,9 +15,9 @@ import Lava.Netlist
 import Lava.Verification
 import Lava.IOBuffering
 
-import Array
+import Data.Array
 import Lava.MyST
-import List(intersperse)
+import Data.List(intersperse)
 import System.Cmd (system)
 import System.Exit (ExitCode(..))
 

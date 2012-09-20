@@ -24,7 +24,7 @@ import System.IO
   , hClose
   )
 
-import System.IO.Error
+import Control.Exception
   ( try
   )
 
@@ -126,6 +126,7 @@ writeDefinitions file props =
 
      try (do readFile theoryFile
              system ("cat " ++ theoryFile ++ " >> " ++ file))
+                :: IO (Either IOError ExitCode)
 
      return ()
  where

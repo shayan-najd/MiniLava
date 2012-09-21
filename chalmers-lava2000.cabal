@@ -1,7 +1,7 @@
 name:                chalmers-lava2000
-version:             1.3
-synopsis:            Hardware description library
-description:         Hardware description library
+version:             1.4
+synopsis:            Hardware description EDSL
+description:         Hardware description EDSL
 category:            Language, Hardware
 license:             BSD3
 license-file:        LICENSE

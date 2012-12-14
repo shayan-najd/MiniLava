@@ -1,5 +1,11 @@
-Install the package by running:
+First install the [Haskell Platform](http://www.haskell.org/platform).
 
-  runghc Setup configure
-  runghc Setup build
-  runghc Setup install
+Then install the package by running
+
+    cabal install
+
+from within this directory. Alternatively, run
+
+    cabal install chalmers-lava2000
+
+to install the latest version on Hackage.

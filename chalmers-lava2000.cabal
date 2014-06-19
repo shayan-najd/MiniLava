@@ -1,17 +1,17 @@
 name:                chalmers-lava2000
-version:             1.4
+version:             1.4.1
 synopsis:            Hardware description EDSL
-description:         Hardware description EDSL
+description:         For more info, see the tutorial: <http://projects.haskell.org/chalmers-lava2000/Doc/tutorial.pdf>
 category:            Language, Hardware
 license:             BSD3
 license-file:        LICENSE
 copyright:           (c) 2008. Koen Claessen <koen@chalmers.se>
 author:              Koen Claessen <koen@chalmers.se>
 maintainer:          Emil Axelsson <emax@chalmers.se>
-homepage:            http://projects.haskell.org/chalmers-lava2000/
+homepage:            http://projects.haskell.org/chalmers-lava2000/Doc/tutorial.pdf
 cabal-version:       >= 1.6
 build-type:          Simple
-data-files:          README, INSTALL, Doc/tutorial.ps, Vhdl/lava.vhd, Scripts/satzoo.wrapper, Scripts/smv.wrapper
+data-files:          README, INSTALL, Doc/tutorial.pdf, Vhdl/lava.vhd, Scripts/satzoo.wrapper, Scripts/smv.wrapper
 
 source-repository head
   type:     darcs

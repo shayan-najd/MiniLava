@@ -18,7 +18,7 @@ import Lava.IOBuffering
 import Data.Array
 import Lava.MyST
 import Data.List(intersperse)
-import System.Cmd (system)
+import System.Process (system)
 import System.Exit (ExitCode(..))
 
 ----------------------------------------------------------------------------------------------------
@@ -52,8 +52,8 @@ iscWith m n a =
  where
 --  execute = "/Scripts/isc "
   execute = "isc "
-	    ++ netfile ++ " "
-	    ++ (m2par m) ++ " " ++ show n
+            ++ netfile ++ " "
+            ++ (m2par m) ++ " " ++ show n
   netfile = verifyDir ++ "/circuit.net"
 
   m2par StepMin = "-smin"
@@ -89,9 +89,9 @@ showN = showA . fmap (showS . fmap show)
 
 showA :: Array Int String -> String
 showA a = "array " ++ show (bounds a) ++ " [" ++
-	  concat (intersperse "," (map (\ (i,s) -> "(" ++ show i ++ "," ++ s ++ ")")
-		                         (assocs a)))
-	  ++ "]"
+          concat (intersperse "," (map (\ (i,s) -> "(" ++ show i ++ "," ++ s ++ ")")
+                                         (assocs a)))
+          ++ "]"
 
 showAll (n,p) = "(" ++ showN n ++ "," ++ show p ++ ")"
 
@@ -105,7 +105,7 @@ net a =
   do (props,_) <- properties a
      let top = case props of
                 [x] -> x
-		xs  -> andl xs
+                xs  -> andl xs
      let (tab, Object top') = table (struct top)
      return (array (0, length tab-1) tab, top')
 
@@ -118,29 +118,29 @@ table str =
 
        let define sym = do
              tab <- readSTRef table
-	     case sym of
-	       And xs -> bin Or (map sneg xs) >>= return . sneg
-	       Or xs  -> bin Or xs
-	       Xor xs -> bin Xor xs
---			    v <- new
---			    writeSTRef table ((v,x):tab)
---			    return (Not v)
-	       Inv x  -> return (sneg x)
-	       x      -> do v <- new
-			    writeSTRef table ((v,x):tab)
-			    return (Pos v)
+             case sym of
+               And xs -> bin Or (map sneg xs) >>= return . sneg
+               Or xs  -> bin Or xs
+               Xor xs -> bin Xor xs
+--                          v <- new
+--                          writeSTRef table ((v,x):tab)
+--                          return (Not v)
+               Inv x  -> return (sneg x)
+               x      -> do v <- new
+                            writeSTRef table ((v,x):tab)
+                            return (Pos v)
 
            bin f [x]      = return x
-	   bin f (x:y:xs) = do
+           bin f (x:y:xs) = do
                v <- new
-	       tab <- readSTRef table
-	       writeSTRef table ((v, f [x,y]) : tab)
-	       bin f (Pos v:xs)
+               tab <- readSTRef table
+               writeSTRef table ((v, f [x,y]) : tab)
+               bin f (Pos v:xs)
 
            new = do
-	     n <- readSTRef ref
-	     writeSTRef ref (n+1)
-	     return n
+             n <- readSTRef ref
+             writeSTRef ref (n+1)
+             return n
 
        str' <- netlistST_ define str
        tab  <- readSTRef table

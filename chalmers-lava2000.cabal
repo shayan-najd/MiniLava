@@ -1,5 +1,5 @@
 name:                chalmers-lava2000
-version:             1.4.1
+version:             1.5
 synopsis:            Hardware description EDSL
 description:         For more info, see the tutorial: <http://projects.haskell.org/chalmers-lava2000/Doc/tutorial.pdf>
 category:            Language, Hardware

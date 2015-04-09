@@ -22,8 +22,11 @@ module Lava.Property
 import Lava.Signal
 import Lava.Generic
 
+import Control.Applicative (Applicative (..))
+
 import Control.Monad
-  ( liftM2
+  ( ap
+  , liftM2
   , liftM3
   , liftM4
   , liftM5
@@ -45,6 +48,10 @@ newtype Gen a
 
 instance Functor Gen where
   fmap f (Gen m) = Gen (\t -> f (m t))
+
+instance Applicative Gen where
+  pure  = return
+  (<*>) = ap
 
 instance Monad Gen where
   return a =

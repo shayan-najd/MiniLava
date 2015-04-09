@@ -13,6 +13,8 @@ module Lava.MyST
   )
  where
 
+import Control.Applicative (Applicative (..))
+import Control.Monad (ap)
 import System.IO
 import System.IO.Unsafe
 import Data.IORef
@@ -25,6 +27,10 @@ unST (ST io) = io
 
 instance Functor (ST s) where
   fmap f (ST io) = ST (fmap f io)
+
+instance Applicative (ST s) where
+  pure  = return
+  (<*>) = ap
 
 instance Monad (ST s) where
   return a    = ST (return a)

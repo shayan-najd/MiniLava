@@ -153,13 +153,17 @@ eval s =
     Equal xs              -> Bool . equal   . map nval $ xs
     If (Bool c) x y       -> if c then x else y
 
-    DelayBool s s' -> wrong Lava.Error.DelayEval
-    DelayInt  s s' -> wrong Lava.Error.DelayEval
-    VarBool   s    -> wrong Lava.Error.VarEval
-    VarInt    s    -> wrong Lava.Error.VarEval
+    DelayBool _ _  -> wrong Lava.Error.DelayEval
+    DelayInt  _ _  -> wrong Lava.Error.DelayEval
+    VarBool   _    -> wrong Lava.Error.VarEval
+    VarInt    _    -> wrong Lava.Error.VarEval
+    _              -> undefined
  where
   bval (Bool b) = b
+  bval _        = undefined
+
   nval (Int n)  = n
+  nval _        = undefined
 
   equal (x:y:xs) = x == y && equal (y:xs)
   equal _        = True
@@ -191,14 +195,14 @@ evalLazy s =
 arguments :: S a -> [a]
 arguments s =
   case s of
-    Bool b     -> []
-    Inv s      -> [s]
+    Bool _     -> []
+    Inv s'     -> [s']
     And xs     -> xs
     Or xs      -> xs
     Xor xs     -> xs
 
-    Int n      -> []
-    Neg s      -> [s]
+    Int _      -> []
+    Neg s'     -> [s']
     Div s1 s2  -> [s1,s2]
     Mod s1 s2  -> [s1,s2]
     Plus xs    -> xs
@@ -207,22 +211,22 @@ arguments s =
     Equal xs   -> xs
     If x y z   -> [x,y,z]
 
-    DelayBool s s' -> [s,s']
-    DelayInt  s s' -> [s,s']
-    VarBool s      -> []
-    VarInt  s      -> []
+    DelayBool s' s'' -> [s',s'']
+    DelayInt  s' s'' -> [s',s'']
+    VarBool _      -> []
+    VarInt  _      -> []
 
 zips :: S [a] -> [S a]
 zips s =
   case s of
     Bool b     -> [Bool b]
-    Inv s      -> map Inv s
+    Inv s'     -> map Inv s'
     And xs     -> map And (transpose xs)
     Or xs      -> map Or  (transpose xs)
     Xor xs     -> map Xor (transpose xs)
 
     Int n      -> [Int n]
-    Neg s      -> map Neg s
+    Neg s'     -> map Neg s'
     Div s1 s2  -> zipWith Div s1 s2
     Mod s1 s2  -> zipWith Mod s1 s2
     Plus xs    -> map Plus  (transpose xs)
@@ -231,10 +235,10 @@ zips s =
     Equal xs   -> map Equal (transpose xs)
     If x y z   -> zipWith3 If x y z
 
-    DelayBool s s' -> zipWith DelayBool s s'
-    DelayInt  s s' -> zipWith DelayInt s s'
-    VarBool s      -> [VarBool s]
-    VarInt  s      -> [VarInt  s]
+    DelayBool s' s'' -> zipWith DelayBool s' s''
+    DelayInt  s' s'' -> zipWith DelayInt s' s''
+    VarBool s'      -> [VarBool s']
+    VarInt  s'      -> [VarInt  s']
 
 ----------------------------------------------------------------
 -- properties of S
@@ -266,46 +270,46 @@ instance Functor S where
 instance Sequent S where
   sequent s =
     case s of
-      Bool b    -> lift0 (Bool b)
-      Inv x     -> lift1 Inv x
-      And xs    -> liftl And xs
-      Or  xs    -> liftl Or  xs
-      Xor xs    -> liftl Xor xs
+      Bool b    -> lft0 (Bool b)
+      Inv x     -> lft1 Inv x
+      And xs    -> lftl And xs
+      Or  xs    -> lftl Or  xs
+      Xor xs    -> lftl Xor xs
 
-      Int   n   -> lift0 (Int n)
-      Neg   x   -> lift1 Neg   x
-      Div   x y -> lift2 Div   x y
-      Mod   x y -> lift2 Mod   x y
-      Plus  xs  -> liftl Plus  xs
-      Times xs  -> liftl Times xs
-      Gte   x y -> lift2 Gte   x y
-      Equal xs  -> liftl Equal xs
-      If x y z  -> lift3 If x y z
+      Int   n   -> lft0 (Int n)
+      Neg   x   -> lft1 Neg   x
+      Div   x y -> lft2 Div   x y
+      Mod   x y -> lft2 Mod   x y
+      Plus  xs  -> lftl Plus  xs
+      Times xs  -> lftl Times xs
+      Gte   x y -> lft2 Gte   x y
+      Equal xs  -> lftl Equal xs
+      If x y z  -> lft3 If x y z
 
-      DelayBool x y -> lift2 DelayBool x y
-      DelayInt  x y -> lift2 DelayInt x y
-      VarBool  v    -> lift0 (VarBool v)
-      VarInt   v    -> lift0 (VarInt v)
+      DelayBool x y -> lft2 DelayBool x y
+      DelayInt  x y -> lft2 DelayInt x y
+      VarBool  v    -> lft0 (VarBool v)
+      VarInt   v    -> lft0 (VarInt v)
    where
-    lift0 op =
+    lft0 op =
       do return op
 
-    lift1 op x =
+    lft1 op x =
       do x' <- x
          return (op x')
 
-    lift2 op x y =
+    lft2 op x y =
       do x' <- x
          y' <- y
          return (op x' y')
 
-    lift3 op x y z =
+    lft3 op x y z =
       do x' <- x
          y' <- y
          z' <- z
          return (op x' y' z')
 
-    liftl op xs =
+    lftl op xs =
       do xs' <- sequence xs
          return (op xs')
 
@@ -341,8 +345,8 @@ instance Show a => Show (S a) where
       DelayBool x y -> showString "delay" . showList [x,y]
       DelayInt  x y -> showString "delay" . showList [x,y]
 
-      VarBool s     -> showString s
-      VarInt  s     -> showString s
+      VarBool s'    -> showString s'
+      VarInt  s'    -> showString s'
 
 
 ----------------------------------------------------------------

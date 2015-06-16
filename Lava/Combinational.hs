@@ -1,6 +1,5 @@
 module Lava.Combinational where
 
-import Lava.Ref
 import Lava.Generic
 import Lava.Signal
 import Lava.Netlist
@@ -8,9 +7,7 @@ import Lava.Sequent
 import Lava.Error
 
 import Lava.MyST
-  ( ST
-  , STRef
-  , newSTRef
+  ( newSTRef
   , readSTRef
   , writeSTRef
   , runST
@@ -36,4 +33,3 @@ simulate circ inp = runST (
 
 ----------------------------------------------------------------
 -- the end.
-

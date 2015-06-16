@@ -15,4 +15,5 @@ import System.Random
 
 type Rnd = StdGen
 
+newRnd :: IO StdGen
 newRnd = newStdGen

@@ -3,7 +3,6 @@ module Lava.Sequential
   )
  where
 
-import Lava.Ref
 import Lava.Signal
 import Lava.Netlist
 import Lava.Sequent
@@ -35,7 +34,7 @@ data Wire s
 -- simulate
 
 simulateSeq :: (Generic a, Generic b) => (a -> b) -> [a] -> [b]
-simulateSeq circ []   = []
+simulateSeq _    []   = []
 simulateSeq circ inps = runST (
   do roots <- newSTRef []
 
@@ -50,13 +49,13 @@ simulateSeq circ inps = runST (
 
          define r s =
            case s of
-             DelayBool s s' -> delay s s'
-             DelayInt  s s' -> delay s s'
+             DelayBool s' s'' -> delay' s' s''
+             DelayInt  s' s'' -> delay' s' s''
              _ ->
                do relate r (arguments s) $
                     eval `fmap` mmap (readSTRef . fst) s
           where
-           delay ri@(rinit,_) r1@(pre,_) =
+           delay' ri@(rinit,_) r1@(pre,_) =
                do state <- newSTRef Nothing
                   r2 <- new
                   root r2
@@ -64,16 +63,16 @@ simulateSeq circ inps = runST (
                   relate r [ri] $
                     do ms <- readSTRef state
                        case ms of
-                         Just s  -> return s
+                         Just s' -> return s'
                          Nothing ->
-                           do s <- readSTRef rinit
-                              writeSTRef state (Just s)
-                              return s
+                           do s' <- readSTRef rinit
+                              writeSTRef state (Just s')
+                              return s'
 
                   relate r2 [r,r1] $
-                    do s <- readSTRef pre
-                       writeSTRef state (Just s)
-                       return s
+                    do s' <- readSTRef pre
+                       writeSTRef state (Just s')
+                       return s'
 
      sr   <- netlistST new define (struct (circ (input inps)))
      rs   <- readSTRef roots
@@ -102,7 +101,7 @@ drive :: [Var s] -> ST s (ST s ())
 drive [] =
   do return (return ())
 
-drive ((rval,rwir):rs) =
+drive ((_,rwir):rs) =
   do wire <- readSTRef rwir
      writeSTRef rwir (error "detected combinational loop")
      driv1 <- drive (dependencies wire)
@@ -130,8 +129,9 @@ input xs = out
 
 takes :: [a] -> [b] -> [b]
 takes []     _      = []
+takes _      []     = error "not defined!"
 takes (_:xs) (y:ys) = y : takes xs ys
+
 
 ----------------------------------------------------------------
 -- the end.
-

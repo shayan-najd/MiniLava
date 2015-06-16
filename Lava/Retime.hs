@@ -4,8 +4,7 @@ module Lava.Retime
  where
 
 import Lava.Signal
-import Lava.Generic
-import Lava.Sequent
+import Lava.Generic hiding (var,delay)
 import Lava.Netlist
 
 import Data.List
@@ -16,7 +15,7 @@ import Data.List
 -- time transformation
 
 timeTransform :: (Generic a, Generic b) => (a -> b) -> ([a] -> [b])
-timeTransform circ []           = []
+timeTransform _    []           = []
 timeTransform circ inps@(inp:_) =
     map construct
   . transStruct
@@ -50,10 +49,9 @@ timeTransform circ inps@(inp:_) =
     map (pickSymbol s) inps
 
   list 0 _       = []
-  list n ~(x:xs) = x : list (n-1) xs
+  list n' ~(x:xs) = x : list (n' -1) xs
 
   tag = "#retime#"
 
 ----------------------------------------------------------------
 -- the end.
-

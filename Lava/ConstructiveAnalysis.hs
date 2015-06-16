@@ -8,8 +8,7 @@ import Lava.Sequent
 import Lava.Ref
 
 import Lava.MyST
-  ( STRef
-  , newSTRef
+  ( newSTRef
   , readSTRef
   , writeSTRef
   , runST
@@ -43,7 +42,7 @@ constructive circ inp =
            define (Bool b) =
              do return (bool b, bool (not b))
 
-           define (DelayBool ~(inipos,inineg) ~(nextpos,nextneg)) =
+           define (DelayBool ~(inipos,_) ~(nextpos,_)) =
              do return (respos, inv respos)
             where
              respos = delay inipos nextpos
@@ -60,9 +59,9 @@ constructive circ inp =
                        , orl  [xpos]
                        )
 
-           define (And xs) =
-             do result ( andl [ xpos | (xpos,_) <- xs ]
-                       , orl  [ xneg | (_,xneg) <- xs ]
+           define (And xs') =
+             do result ( andl [ xpos | (xpos,_) <- xs' ]
+                       , orl  [ xneg | (_,xneg) <- xs' ]
                        )
 
            define (Or xs) =
@@ -76,23 +75,23 @@ constructive circ inp =
                        )
             where
              xorpos []               = low
-             xorpos [(xpos,xneg)]    = xpos
-             xorpos ((xpos,xneg):xs) =
+             xorpos [(xpos,_)]    = xpos
+             xorpos ((xpos,xneg'):_) =
                or2 ( andl (xpos : [ xneg | (_,xneg) <- xs ])
-                   , andl [ xneg, xorpos xs ]
+                   , andl [ xneg', xorpos xs ]
                    )
 
-             xorneg xs =
-               or2 ( andl [ xneg | (_,xneg) <- xs ]
+             xorneg xs' =
+               or2 ( andl [ xneg | (_,xneg) <- xs' ]
                    , orl  [ and2 (xpos,ypos)
-                          | (xpos,ypos) <- pairs [ xpos | (_,xpos) <- xs ]
+                          | (xpos,ypos) <- pairs [ xpos | (_,xpos) <- xs' ]
                           ]
                    )
 
              pairs []     = []
-             pairs (x:xs) = [ (x,y) | y <- xs ] ++ pairs xs
+             pairs (x:xs') = [ (x,y) | y <- xs' ] ++ pairs xs'
 
-           define s =
+           define _ =
              do wrong NoArithmetic
 
            result (xpos,xneg) =
@@ -100,7 +99,7 @@ constructive circ inp =
                 writeSTRef defined ((xpos <#> xneg) : defs)
                 return (xpos,xneg)
 
-        in mmap gather (struct (circ (symbolize tag inp)))
+       _ <- mmap gather (struct (circ (symbolize tag inp)))
 
        defs <- readSTRef defined
        return (andl defs)
@@ -110,4 +109,3 @@ constructive circ inp =
 
 ----------------------------------------------------------------
 -- the end.
-

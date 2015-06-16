@@ -26,10 +26,10 @@ import Data.IORef
 
 unsafeCoerce :: a -> b
 unsafeCoerce a = unsafePerformIO $
-  do writeIORef ref a
-     readIORef ref
+  do writeIORef ref' a
+     readIORef ref'
  where
-  ref = unsafePerformIO $ newIORef undefined
+  ref' = unsafePerformIO $ newIORef undefined
   -- Defined here because Unsafe.Coerce doesn't exist in Hugs.
 
 {-
@@ -165,8 +165,7 @@ memoRefST f = unsafePerformST $
 -----------------------------------------------------------------
 -- Dyn
 
-data Dyn
-  = Dyn
+data Dyn -- = Dyn
 
 toDyn :: a -> Dyn
 toDyn = unsafeCoerce
@@ -176,6 +175,3 @@ fromDyn = unsafeCoerce
 
 -----------------------------------------------------------------
 -- the end.
-
-
-

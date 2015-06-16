@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 module Lava.MyST
   ( ST
   , STRef
@@ -65,4 +66,3 @@ unsafeInterleaveST (ST io) = ST (unsafeInterleaveIO io)
 
 unsafeIOtoST :: IO a -> ST s a
 unsafeIOtoST = ST
-

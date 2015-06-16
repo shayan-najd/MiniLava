@@ -1,6 +1,5 @@
 module Lava.Test where
 
-import Lava.Signal
 import Lava.Sequential
 import Lava.Generic
 
@@ -20,4 +19,3 @@ test circ =
 
 ----------------------------------------------------------------
 -- the end.
-

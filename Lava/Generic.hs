@@ -56,43 +56,52 @@ class Generic a where
 instance Generic Symbol where
   struct    s          = Object s
   construct (Object s) = s
+  construct _          = undefined
 
 instance Generic (Signal a) where
   struct    (Signal s) = Object s
   construct (Object s) = Signal s
+  construct _          = undefined
 
 instance Generic () where
   struct    ()            = Compound []
   construct (Compound []) = ()
+  construct _             = undefined
 
 instance Generic a => Generic [a] where
   struct    xs            = Compound (map struct xs)
   construct (Compound xs) = map construct xs
+  construct _             = undefined
 
 instance (Generic a, Generic b) => Generic (a,b) where
   struct    (a,b)            = Compound [struct a, struct b]
   construct (Compound [a,b]) = (construct a, construct b)
+  construct _                = undefined
 
 instance (Generic a, Generic b, Generic c) => Generic (a,b,c) where
   struct    (a,b,c)            = Compound [struct a, struct b, struct c]
   construct (Compound [a,b,c]) = (construct a, construct b, construct c)
+  construct _                  = undefined
 
 instance (Generic a, Generic b, Generic c, Generic d) => Generic (a,b,c,d) where
   struct    (a,b,c,d)            = Compound [struct a, struct b, struct c, struct d]
   construct (Compound [a,b,c,d]) = (construct a, construct b, construct c, construct d)
+  construct _                    = undefined
 
 instance (Generic a, Generic b, Generic c, Generic d, Generic e) => Generic (a,b,c,d,e) where
   struct    (a,b,c,d,e)            = Compound [struct a, struct b, struct c, struct d, struct e]
   construct (Compound [a,b,c,d,e]) = (construct a, construct b, construct c, construct d, construct e)
+  construct _                      = undefined
 
 instance (Generic a, Generic b, Generic c, Generic d, Generic e, Generic f) => Generic (a,b,c,d,e,f) where
   struct    (a,b,c,d,e,f)            = Compound [struct a, struct b, struct c, struct d, struct e, struct f]
   construct (Compound [a,b,c,d,e,f]) = (construct a, construct b, construct c, construct d, construct e, construct f)
+  construct _                        = undefined
 
 instance (Generic a, Generic b, Generic c, Generic d, Generic e, Generic f, Generic g) => Generic (a,b,c,d,e,f,g) where
   struct    (a,b,c,d,e,f,g)            = Compound [struct a, struct b, struct c, struct d, struct e, struct f, struct g]
   construct (Compound [a,b,c,d,e,f,g]) = (construct a, construct b, construct c, construct d, construct e, construct f, construct g)
-
+  construct _                          = undefined
 ----------------------------------------------------------------
 -- Ops
 
@@ -128,26 +137,26 @@ unSignal (Signal s) = s
 ops :: Symbol -> Ops
 ops s =
   case unsymbol s of
-    Bool b         -> opsBool
-    Inv s          -> opsBool
-    And xs         -> opsBool
-    Or xs          -> opsBool
-    Xor xs         -> opsBool
+    Bool _         -> opsBool
+    Inv _          -> opsBool
+    And _          -> opsBool
+    Or _          -> opsBool
+    Xor _         -> opsBool
 
-    Int n          -> opsInt
-    Neg s          -> opsInt
-    Div s1 s2      -> opsInt
-    Mod s1 s2      -> opsInt
-    Plus xs        -> opsInt
-    Times xs       -> opsInt
-    Gte x y        -> opsBool
-    Equal xs       -> opsBool
-    If x y z       -> opsInt
+    Int _          -> opsInt
+    Neg _          -> opsInt
+    Div _ _      -> opsInt
+    Mod _ _      -> opsInt
+    Plus _        -> opsInt
+    Times _       -> opsInt
+    Gte _ _        -> opsBool
+    Equal _       -> opsBool
+    If _ _ _       -> opsInt
 
-    DelayBool s s' -> opsBool
-    DelayInt  s s' -> opsInt
-    VarBool s      -> opsBool
-    VarInt  s      -> opsInt
+    DelayBool _ _  -> opsBool
+    DelayInt  _ _  -> opsInt
+    VarBool _      -> opsBool
+    VarInt  _      -> opsInt
 
 ----------------------------------------------------------------
 -- generic definitions
@@ -168,32 +177,33 @@ delay x y = construct (del (struct x) (struct y))
  where
   del (Object a)    ~(Object b)    = Object (delaySymbol (ops a) a b)
   del (Compound as) ~(Compound bs) = Compound (lazyZipWith del as bs)
-  del _             _              = wrong Lava.Error.IncompatibleStructures
 
 zeroify :: Generic a => a -> a
-zeroify x = construct (zero (struct x))
+zeroify x = construct (zero' (struct x))
  where
-  zero (Object a)    = Object (zeroSymbol (ops a))
-  zero (Compound as) = Compound [ zero a | a <- as ]
+  zero' (Object a)    = Object (zeroSymbol (ops a))
+  zero' (Compound as) = Compound [ zero' a | a <- as ]
 
 symbolize :: Generic a => String -> a -> a
 symbolize s x = construct (sym s (struct x))
  where
-  sym s (Object a)    = Object (varSymbol (ops a) s)
-  sym s (Compound as) = Compound [ sym (s ++ "_" ++ show i) a
-                                 | (a,i) <- as `zip` [0..]
-                                 ]
+  sym s' (Object a)    = Object (varSymbol (ops a) s')
+  sym s' (Compound as) = Compound [ sym (s' ++ "_" ++ show i) a
+                                  | (a,i) <- as `zip` [0:: Integer ..]
+                                  ]
 
 pickSymbol :: Generic a => String -> a -> Symbol
 pickSymbol s a = pick (numbers s) (struct a)
  where
-  pick _      (Object a)    = a
+  pick _      (Object a')   = a'
   pick (n:ns) (Compound as) = pick ns (as !! n)
+  pick _      _             = undefined
 
-  numbers ('_':s) = read s1 : numbers s2
-   where
-    s1 = takeWhile (/= '_') s
-    s2 = dropWhile (/= '_') s
+  numbers ('_':s') = let s1 = takeWhile (/= '_') s'
+                         s2 = dropWhile (/= '_') s'
+                     in  read s1 : numbers s2
+  numbers _       = undefined
+
 
 ----------------------------------------------------------------
 -- Constructive
@@ -232,7 +242,7 @@ instance ConstructiveSig Bool where
    where
     (rnd1,rnd2) = split rnd
     n           = 30 + (valRnd rnd1 `mod` 10)
-    bit rnd     = bool (even (valRnd rnd))
+    bit rnd'    = bool (even (valRnd rnd'))
     looping xs  = out where out = foldr delay out xs
 
 instance ConstructiveSig Int where
@@ -242,7 +252,7 @@ instance ConstructiveSig Int where
    where
     (rnd1,rnd2) = split rnd
     n           = 30 + (valRnd rnd1 `mod` 10)
-    num rnd     = int (20 + (valRnd rnd `mod` 20))
+    num rnd'    = int (20 + (valRnd rnd' `mod` 20))
     looping xs  = out where out = foldr delay out xs
 
 instance ConstructiveSig a => Constructive (Signal a) where
@@ -252,8 +262,8 @@ instance ConstructiveSig a => Constructive (Signal a) where
 
 instance Constructive () where
   zero       = ()
-  var s      = ()
-  random rnd = ()
+  var _      = ()
+  random _   = ()
 
 instance (Constructive a, Constructive b)
       => Constructive (a, b) where
@@ -361,7 +371,7 @@ instance Choice (Signal a) where
     Signal (ifThenElse cond (x, y))
 
 instance Choice () where
-  ifThenElse cond (_, _) = ()
+  ifThenElse _ (_, _) = ()
 
 instance Choice a => Choice [a] where
   ifThenElse cond (xs, ys) =
@@ -405,16 +415,15 @@ mux (cond, (a, b)) = ifThenElse cond (b, a)
 
 strongZipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
 strongZipWith f (x:xs) (y:ys) = f x y : strongZipWith f xs ys
-strongZipWith f []     []     = []
-strongZipWith f _      _      = wrong Lava.Error.IncompatibleStructures
+strongZipWith _ []     []     = []
+strongZipWith _ _      _      = wrong Lava.Error.IncompatibleStructures
 
 lazyZipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-lazyZipWith f []     _  = []
+lazyZipWith _ []     _  = []
 lazyZipWith f (x:xs) ys = f x (safe head ys) : lazyZipWith f xs (safe tail ys)
  where
-  safe f [] = wrong Lava.Error.IncompatibleStructures
-  safe f xs = f xs
+  safe _  []  = wrong Lava.Error.IncompatibleStructures
+  safe f' xs' = f' xs'
 
 ----------------------------------------------------------------
 -- the end.
-

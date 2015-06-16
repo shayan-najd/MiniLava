@@ -19,8 +19,9 @@ module Lava.Property
   )
  where
 
+import Prelude hiding (mod)
 import Lava.Signal
-import Lava.Generic
+import Lava.Generic hiding (var)
 
 import Control.Applicative (Applicative (..))
 
@@ -55,7 +56,7 @@ instance Applicative Gen where
 
 instance Monad Gen where
   return a =
-    Gen (\t -> a)
+    Gen (\_ -> a)
 
   Gen m >>= k =
     Gen (\(Fork _ t1 t2) -> let a = m t1 ; Gen m2 = k a in m2 t2)
@@ -201,17 +202,17 @@ triple :: Gen a -> Gen (a,a,a)
 triple gen = liftM3 (,,) gen gen gen
 
 list :: Fresh a => Int -> Gen [a]
-list n = sequence [ fresh | i <- [1..n] ]
+list n = sequence [ fresh | _ <- [1..n] ]
 
 listOf :: Int -> Gen a -> Gen [a]
-listOf n gen = sequence [ gen | i <- [1..n] ]
+listOf n gen = sequence [ gen | _ <- [1..n] ]
 
 ----------------------------------------------------------------
 -- combinators for circuits
 
 results :: Int -> Gen (a -> b) -> Gen (a -> [b])
 results n gen =
-  do fs <- sequence [ gen | i <- [1..n] ]
+  do fs <- sequence [ gen | _ <- [1..n] ]
      return (\a -> map ($ a) fs)
 
 sequential :: (CoFresh a, Fresh b, Choice b) => Int -> Gen (a -> b)
@@ -277,7 +278,7 @@ instance ShowModel (Signal a) where
       Nothing -> []
 
 instance ShowModel () where
-  showModel model () =
+  showModel _ () =
     ["()"]
 
 instance (ShowModel a, ShowModel b) => ShowModel (a, b) where
@@ -317,27 +318,40 @@ instance ShowModel a => ShowModel [a] where
       (transpose (map (showModel model) as))
 
 instance ShowModel (a -> b) where
-  showModel model sig = []
+  showModel _ _ = []
 
-zipWith' f []     []     = []
+
+zipWith' :: ([Char] -> [Char] -> t)
+            -> [[Char]] -> [[Char]]
+            -> [t]
+zipWith' _ []     []     = []
 zipWith' f []     ys     = zipWith' f ["?"] ys
 zipWith' f xs     []     = zipWith' f xs ["?"]
 zipWith' f (x:xs) (y:ys) = f x y : zipWith' f xs ys
 
-zipWith3' f []     []     []     = []
+zipWith3' :: ([Char] -> [Char] -> [Char] -> t)
+             -> [[Char]] -> [[Char]] -> [[Char]]
+             -> [t]
+zipWith3' _ []     []     []     = []
 zipWith3' f []     ys     zs     = zipWith3' f ["?"] ys zs
 zipWith3' f xs     []     zs     = zipWith3' f xs ["?"] zs
 zipWith3' f xs     ys     []     = zipWith3' f xs ys ["?"]
 zipWith3' f (x:xs) (y:ys) (z:zs) = f x y z : zipWith3' f xs ys zs
 
-zipWith4' f []     []     []     []     = []
+zipWith4' :: ([Char] -> [Char] -> [Char] -> [Char] -> t)
+             -> [[Char]] -> [[Char]] -> [[Char]] -> [[Char]]
+             -> [t]
+zipWith4' _ []     []     []     []     = []
 zipWith4' f []     ys     zs     vs     = zipWith4' f ["?"] ys zs vs
 zipWith4' f xs     []     zs     vs     = zipWith4' f xs ["?"] zs vs
 zipWith4' f xs     ys     []     vs     = zipWith4' f xs ys ["?"] vs
 zipWith4' f xs     ys     zs     []     = zipWith4' f xs ys zs ["?"]
 zipWith4' f (x:xs) (y:ys) (z:zs) (v:vs) = f x y z v : zipWith4' f xs ys zs vs
 
-zipWith5' f []     []     []     []     []     = []
+zipWith5' :: ([Char] -> [Char] -> [Char] -> [Char] -> [Char] -> t)
+             -> [[Char]] -> [[Char]] -> [[Char]] -> [[Char]]
+             -> [[Char]] -> [t]
+zipWith5' _ []     []     []     []     []     = []
 zipWith5' f []     ys     zs     vs     ws     = zipWith5' f ["?"] ys zs vs ws
 zipWith5' f xs     []     zs     vs     ws     = zipWith5' f xs ["?"] zs vs ws
 zipWith5' f xs     ys     []     vs     ws     = zipWith5' f xs ys ["?"] vs ws
@@ -345,7 +359,10 @@ zipWith5' f xs     ys     zs     []     ws     = zipWith5' f xs ys zs ["?"] ws
 zipWith5' f xs     ys     zs     vs     []     = zipWith5' f xs ys zs vs ["?"]
 zipWith5' f (x:xs) (y:ys) (z:zs) (v:vs) (w:ws) = f x y z v w : zipWith5' f xs ys zs vs ws
 
-zipWith6' f []     []     []     []     []     []     = []
+zipWith6' :: ([Char] -> [Char] -> [Char] -> [Char] -> [Char] -> [Char] -> t)
+             -> [[Char]] -> [[Char]] -> [[Char]] -> [[Char]]
+             -> [[Char]] -> [[Char]] -> [t]
+zipWith6' _ []     []     []     []     []     []     = []
 zipWith6' f []     ys     zs     vs     ws     ps     = zipWith6' f ["?"] ys zs vs ws ps
 zipWith6' f xs     []     zs     vs     ws     ps     = zipWith6' f xs ["?"] zs vs ws ps
 zipWith6' f xs     ys     []     vs     ws     ps     = zipWith6' f xs ys ["?"] vs ws ps
@@ -354,7 +371,10 @@ zipWith6' f xs     ys     zs     vs     []     ps     = zipWith6' f xs ys zs vs 
 zipWith6' f xs     ys     zs     vs     ws     []     = zipWith6' f xs ys zs vs ws ["?"]
 zipWith6' f (x:xs) (y:ys) (z:zs) (v:vs) (w:ws) (p:ps) = f x y z v w p : zipWith6' f xs ys zs vs ws ps
 
-zipWith7' f []     []     []     []     []     []     []     = []
+zipWith7' :: ([Char] -> [Char] -> [Char] -> [Char] -> [Char] -> [Char] -> [Char] -> t)
+             -> [[Char]] -> [[Char]] -> [[Char]] -> [[Char]]
+             -> [[Char]] -> [[Char]] -> [[Char]] -> [t]
+zipWith7' _ []     []     []     []     []     []     []     = []
 zipWith7' f []     ys     zs     vs     ws     ps     qs     = zipWith7' f ["?"] ys zs vs ws ps qs
 zipWith7' f xs     []     zs     vs     ws     ps     qs     = zipWith7' f xs ["?"] zs vs ws ps qs
 zipWith7' f xs     ys     []     vs     ws     ps     qs     = zipWith7' f xs ys ["?"] vs ws ps qs
@@ -382,6 +402,9 @@ properties a = generate gen
 ----------------------------------------------------------------
 -- bweeuh
 
+liftM6 :: Monad m =>
+          (t -> t1 -> t2 -> t3 -> t4 -> t5 -> b)
+          -> m t -> m t1 -> m t2 -> m t3 -> m t4 -> m t5 -> m b
 liftM6 f g1 g2 g3 g4 g5 g6 =
   do a1 <- g1
      a2 <- g2
@@ -391,6 +414,9 @@ liftM6 f g1 g2 g3 g4 g5 g6 =
      a6 <- g6
      return (f a1 a2 a3 a4 a5 a6)
 
+liftM7 :: Monad m =>
+          (t -> t1 -> t2 -> t3 -> t4 -> t5 -> t6 -> b)
+          -> m t -> m t1 -> m t2 -> m t3 -> m t4 -> m t5 -> m t6 -> m b
 liftM7 f g1 g2 g3 g4 g5 g6 g7 =
   do a1 <- g1
      a2 <- g2
@@ -403,4 +429,3 @@ liftM7 f g1 g2 g3 g4 g5 g6 g7 =
 
 ----------------------------------------------------------------
 -- the end.
-

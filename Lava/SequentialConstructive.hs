@@ -3,11 +3,12 @@ module Lava.SequentialConstructive
   )
  where
 
-import Lava.Ref
+import Prelude hiding  (init)
 import Lava.Signal
 import Lava.Netlist
 import Lava.Sequent
-import Lava.Generic
+import Lava.Generic hiding (delay)
+import qualified Lava.Generic
 import Lava.Error
 
 import Data.IORef
@@ -118,7 +119,7 @@ simulateCon circ inps = unsafePerformIO $
     sr <- netlistIO new define (struct (circ (input inps)))
 
     outs <- timedLazyLoop time0 $ \time ->
-      do emptySet macro ($ time)
+      do _ <- emptySet macro ($ time)
          while (emptySet micro ($ time))
          s <- mmap (`actualValueWire` time) sr
          return (construct (symbol `fmap` s))
@@ -143,7 +144,7 @@ emptySet rset action =
      writeIORef rset []
      case xs of
        [] -> do return False
-       _  -> do sequence [ action x | x <- xs ]
+       _  -> do sequence_ [ action x | x <- xs ]
                 return True
 
 while :: Monad m => m Bool -> m ()
@@ -162,12 +163,12 @@ timedLazyLoop t m =
 input :: Generic a => [a] -> a
 input xs = out
  where
-  out = foldr delay out xs
+  out = foldr Lava.Generic.delay out xs
 
 takes :: [a] -> [b] -> [b]
 takes []     _      = []
 takes (_:xs) (y:ys) = y : takes xs ys
+takes _      _      = undefined
 
 ----------------------------------------------------------------
 -- the end.
-

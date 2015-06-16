@@ -7,7 +7,6 @@ module Lava.Netlist
 
 import Lava.Ref
 import Lava.Signal
-import Lava.Generic
 import Lava.Sequent
 
 import Lava.MyST
@@ -57,4 +56,3 @@ netlistST new define symbols =
 
 ----------------------------------------------------------------
 -- the end.
-

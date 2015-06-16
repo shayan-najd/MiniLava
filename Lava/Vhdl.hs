@@ -10,7 +10,6 @@ import Lava.Netlist
 import Lava.Generic
 import Lava.Sequent
 import Lava.Error
-import Lava.LavaDir
 
 import Data.List
   ( intersperse
@@ -196,4 +195,3 @@ writeDefinitions file name inp out out' =
 
 ----------------------------------------------------------------
 -- the end.
-

@@ -36,7 +36,6 @@ wrong err =
       EnumOnSymbols          -> "enumerating symbolic values"
 
       Internal_OptionNotFound -> internal "option not found"
-      _                       -> internal "unknown error"
 
 internal :: String -> String
 internal msg = "INTERNAL ERROR: " ++ msg
@@ -44,4 +43,3 @@ internal msg = "INTERNAL ERROR: " ++ msg
 
 ----------------------------------------------------------------
 -- the end.
-

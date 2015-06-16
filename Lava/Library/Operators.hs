@@ -1,5 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
-module Lava.Operators where
+module Lava.Library.Operators where
 
 import Lava.Signal
 import Lava.Generic

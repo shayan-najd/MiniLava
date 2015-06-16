@@ -6,8 +6,8 @@ module Lava
   , module Lava.Sequential
   , module Lava.SequentialConstructive
   , module Lava.ConstructiveAnalysis
-  , module Lava.Test
-  , module Lava.Property
+--  , module Lava.Test
+--  , module Lava.Property
   , module Lava.Retime
   , module Lava.Vhdl
   )
@@ -20,7 +20,5 @@ import Lava.Combinational
 import Lava.Sequential
 import Lava.SequentialConstructive
 import Lava.ConstructiveAnalysis
-import Lava.Test
-import Lava.Property
 import Lava.Retime
 import Lava.Vhdl

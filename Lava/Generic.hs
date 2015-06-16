@@ -4,11 +4,13 @@ import Lava.Signal
 import Lava.Sequent
 import Lava.Error
 
+{-
 import Lava.LavaRandom
   ( Rnd
   , split
   , next
   )
+-}
 
 import Data.List
   ( transpose
@@ -211,12 +213,10 @@ pickSymbol s a = pick (numbers s) (struct a)
 class ConstructiveSig a where
   zeroSig   :: Signal a
   varSig    :: String -> Signal a
-  randomSig :: Rnd -> Signal a
 
 class Generic a => Constructive a where
   zero   :: a
   var    :: String -> a
-  random :: Rnd -> a
 
 zeroList :: Constructive a => Int -> [a]
 zeroList n = replicate n zero
@@ -224,88 +224,53 @@ zeroList n = replicate n zero
 varList :: Constructive a => Int -> String -> [a]
 varList n s = [ var (s ++ "_" ++ show i) | i <- [0..(n-1)] ]
 
-randomList :: Constructive a => Int -> Rnd -> [a]
-randomList n rnd = take n [ random rnd' | rnd' <- splitRndList rnd ]
-
-splitRndList :: Rnd -> [Rnd]
-splitRndList rnd = rnd1 : splitRndList rnd2 where (rnd1, rnd2) = split rnd
-
-valRnd :: Rnd -> Int
-valRnd rnd = i where (i, _) = next rnd
-
 -- instances
 
 instance ConstructiveSig Bool where
   zeroSig       = low
   varSig        = varBool
-  randomSig rnd = looping (take n [ bit rnd' | rnd' <- splitRndList rnd2 ])
-   where
-    (rnd1,rnd2) = split rnd
-    n           = 30 + (valRnd rnd1 `mod` 10)
-    bit rnd'    = bool (even (valRnd rnd'))
-    looping xs  = out where out = foldr delay out xs
 
 instance ConstructiveSig Int where
   zeroSig     = int 0
   varSig      = varInt
-  randomSig rnd = looping (take n [ num rnd' | rnd' <- splitRndList rnd2 ])
-   where
-    (rnd1,rnd2) = split rnd
-    n           = 30 + (valRnd rnd1 `mod` 10)
-    num rnd'    = int (20 + (valRnd rnd' `mod` 20))
-    looping xs  = out where out = foldr delay out xs
 
 instance ConstructiveSig a => Constructive (Signal a) where
   zero   = zeroSig
   var    = varSig
-  random = randomSig
 
 instance Constructive () where
   zero       = ()
   var _      = ()
-  random _   = ()
 
 instance (Constructive a, Constructive b)
       => Constructive (a, b) where
   zero       = (zero, zero)
   var s      = (var (s ++ "_1"), var (s ++ "_2"))
-  random rnd = (random rnd1, random rnd2)
-   where (rnd1, rnd2) = split rnd
 
 instance (Constructive a, Constructive b, Constructive c)
       => Constructive (a, b, c) where
   zero     = (zero, zero, zero)
   var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"))
-  random rnd = (random rnd1, random rnd2, random rnd3)
-   where (rnd1: rnd2 : rnd3 : _) = splitRndList rnd
 
 instance (Constructive a, Constructive b, Constructive c, Constructive d)
       => Constructive (a, b, c, d) where
   zero     = (zero, zero, zero, zero)
   var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"))
-  random rnd = (random rnd1, random rnd2, random rnd3, random rnd4)
-   where (rnd1: rnd2 : rnd3 : rnd4 : _) = splitRndList rnd
 
 instance (Constructive a, Constructive b, Constructive c, Constructive d, Constructive e)
       => Constructive (a, b, c, d, e) where
   zero     = (zero, zero, zero, zero, zero)
   var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"))
-  random rnd = (random rnd1, random rnd2, random rnd3, random rnd4, random rnd5)
-   where (rnd1: rnd2 : rnd3 : rnd4 : rnd5 : _) = splitRndList rnd
 
 instance (Constructive a, Constructive b, Constructive c, Constructive d, Constructive e, Constructive f)
       => Constructive (a, b, c, d, e, f) where
   zero     = (zero, zero, zero, zero, zero, zero)
   var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"), var (s ++ "_6"))
-  random rnd = (random rnd1, random rnd2, random rnd3, random rnd4, random rnd5, random rnd6)
-   where (rnd1: rnd2 : rnd3 : rnd4 : rnd5 : rnd6 : _) = splitRndList rnd
 
 instance (Constructive a, Constructive b, Constructive c, Constructive d, Constructive e, Constructive f, Constructive g)
       => Constructive (a, b, c, d, e, f, g) where
   zero     = (zero, zero, zero, zero, zero, zero, zero)
   var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"), var (s ++ "_6"), var (s ++ "_7"))
-  random rnd = (random rnd1, random rnd2, random rnd3, random rnd4, random rnd5, random rnd6, random rnd7)
-   where (rnd1: rnd2 : rnd3 : rnd4 : rnd5 : rnd6 : rnd7 : _) = splitRndList rnd
 
 ----------------------------------------------------------------
 -- Finite

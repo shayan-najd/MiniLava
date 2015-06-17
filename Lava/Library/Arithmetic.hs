@@ -1,4 +1,4 @@
-module Lava.Arithmetic where
+module Lava.Library.Arithmetic where
 
 import Prelude hiding (abs,sum)
 import Lava

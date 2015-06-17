@@ -5,6 +5,7 @@ module Lava.Netlist
   )
  where
 
+import Control.Applicative
 import Data.Traversable
 import Lava.Ref
 import Lava.Signal
@@ -24,36 +25,43 @@ netlist phi symbols = fmap cata symbols
 
 netlistIO :: Traversable f => IO v -> (v -> S v -> IO ()) ->
              f Symbol -> IO (f v)
-netlistIO new define symbols =
-  do tab <- tableIO
+netlistIO = netListM tableIO findIO extendIO
 
-     let gather (Symbol sym) =
-           do visited <- findIO tab sym
+netlistST :: Traversable f => ST s v -> (v -> S v -> ST s ()) ->
+             f Symbol -> ST s (f v)
+netlistST = netListM tableST findST extendST
+
+netListM :: (Traversable f, Applicative m, Monad m) =>
+            m a
+            -> (a -> Ref (S Symbol) -> m (Maybe b))
+            -> (a -> Ref (S Symbol) -> b -> m ())
+            -> m b
+            -> (b -> S b -> m ())
+            -> f Symbol
+            -> m (f b)
+netListM tableM findM extendM new define symbols =
+  do tab <- tableM
+     traverse (gather new define tab findM extendM) symbols
+
+gather :: (Applicative m, Monad m) =>
+          m b
+          -> (b -> S b -> m ())
+          -> a
+          -> (a -> Ref (S Symbol) -> m (Maybe b))
+          -> (a -> Ref (S Symbol) -> b -> m ())
+          -> Symbol
+          -> m b
+gather new define tab findM extendM (Symbol sym) =
+           do visited <- findM tab sym
               case visited of
                 Just v  -> do return v
                 Nothing -> do v <- new
-                              extendIO tab sym v
-                              s <- traverse gather (deref sym)
+                              extendM tab sym v
+                              s <- traverse
+                                   (gather new define tab findM extendM)
+                                   (deref sym)
                               define v s
                               return v
-
-      in traverse gather symbols
-
-netlistST :: Traversable f => ST s v -> (v -> S v -> ST s ()) -> f Symbol -> ST s (f v)
-netlistST new define symbols =
-  do tab <- tableST
-
-     let gather (Symbol sym) =
-           do visited <- findST tab sym
-              case visited of
-                Just v  -> do return v
-                Nothing -> do v <- new
-                              extendST tab sym v
-                              s <- traverse gather (deref sym)
-                              define v s
-                              return v
-
-      in traverse gather symbols
 
 ----------------------------------------------------------------
 -- the end.

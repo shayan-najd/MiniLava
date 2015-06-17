@@ -1,6 +1,5 @@
 module Lava.Netlist
-  ( netlist
-  , netlistIO
+  ( netlistIO
   , netlistST
   )
  where
@@ -16,12 +15,6 @@ import Lava.MyST
 
 ----------------------------------------------------------------
 -- netlist
-
-netlist :: Functor f => (S a -> a) -> f Symbol -> f a
-netlist phi symbols = fmap cata symbols
- where
-  cata (Symbol sym) = cata' sym
-  cata'             = memoRef (phi . fmap cata . deref)
 
 netlistIO :: Traversable f => IO v -> (v -> S v -> IO ()) ->
              f Symbol -> IO (f v)

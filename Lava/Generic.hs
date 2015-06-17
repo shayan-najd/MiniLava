@@ -85,7 +85,6 @@ data Ops
         , delaySymbol :: Symbol -> Symbol -> Symbol
         , ifSymbol    :: Signal Bool -> (Symbol, Symbol) -> Symbol
         , varSymbol   :: String -> Symbol
-        , zeroSymbol  :: Symbol
         }
 
 opsBool :: Ops
@@ -94,7 +93,6 @@ opsBool =
       , delaySymbol = \x y     -> unSignal $ delayBool (Signal x) (Signal y)
       , ifSymbol    = \c (x,y) -> unSignal $ ifBool c  (Signal x,  Signal y)
       , varSymbol   = \s       -> symbol (VarBool s)
-      , zeroSymbol  =             symbol (Bool False)
       }
 
 opsInt :: Ops
@@ -103,7 +101,6 @@ opsInt =
       , delaySymbol = \x y     -> unSignal $ delayInt (Signal x) (Signal y)
       , ifSymbol    = \c (x,y) -> unSignal $ ifInt c  (Signal x,  Signal y)
       , varSymbol   = \s       -> symbol (VarInt s)
-      , zeroSymbol  =             symbol (Int 0)
       }
 
 unSignal :: Signal a -> Symbol

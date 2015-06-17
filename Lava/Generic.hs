@@ -1,20 +1,13 @@
-module Lava.Generic where
+{-# LANGUAGE StandaloneDeriving,DeriveFoldable,DeriveTraversable,DeriveFunctor,FlexibleInstances #-}
+module Lava.Generic
+  (Struct(..),Constructive(..),Generic(..),Choice(..),delay,symbolize,equal,mux) where
+
+import Prelude hiding (concatMap)
+import Data.Traversable
+import Data.Foldable
 
 import Lava.Signal
-import Lava.Sequent
 import Lava.Error
-
-{-
-import Lava.LavaRandom
-  ( Rnd
-  , split
-  , next
-  )
--}
-
-import Data.List
-  ( transpose
-  )
 
 ----------------------------------------------------------------
 -- Struct
@@ -24,29 +17,9 @@ data Struct a
   | Object a
  deriving (Eq, Show)
 
-flatten :: Struct a -> [a]
-flatten (Object a)    = [a]
-flatten (Compound ss) = concatMap flatten ss
-
-transStruct :: Struct [a] -> [Struct a]
-transStruct (Object as)   = map Object as
-transStruct (Compound ss) =
-  map Compound . transpose . map transStruct $ ss
-
--- structural operations
-
-instance Functor Struct where
-  fmap f (Object a)    = Object (f a)
-  fmap f (Compound xs) = Compound (map (fmap f) xs)
-
-instance Sequent Struct where
-  sequent (Object m) =
-    do a <- m
-       return (Object a)
-
-  sequent (Compound xs) =
-    do as <- sequence [ sequent x | x <- xs ]
-       return (Compound as)
+deriving instance Functor Struct
+deriving instance Foldable Struct
+deriving instance Traversable Struct
 
 ----------------------------------------------------------------
 -- Generic datatypes
@@ -139,26 +112,24 @@ unSignal (Signal s) = s
 ops :: Symbol -> Ops
 ops s =
   case unsymbol s of
-    Bool _         -> opsBool
-    Inv _          -> opsBool
-    And _          -> opsBool
+    Bool _        -> opsBool
+    Inv _         -> opsBool
+    And _         -> opsBool
     Or _          -> opsBool
     Xor _         -> opsBool
-
-    Int _          -> opsInt
-    Neg _          -> opsInt
-    Div _ _      -> opsInt
-    Mod _ _      -> opsInt
+    Int _         -> opsInt
+    Neg _         -> opsInt
+    Div _ _       -> opsInt
+    Mod _ _       -> opsInt
     Plus _        -> opsInt
     Times _       -> opsInt
-    Gte _ _        -> opsBool
+    Gte _ _       -> opsBool
     Equal _       -> opsBool
-    If _ _ _       -> opsInt
-
-    DelayBool _ _  -> opsBool
-    DelayInt  _ _  -> opsInt
-    VarBool _      -> opsBool
-    VarInt  _      -> opsInt
+    If _ _ _      -> opsInt
+    DelayBool _ _ -> opsBool
+    DelayInt  _ _ -> opsInt
+    VarBool _     -> opsBool
+    VarInt  _     -> opsInt
 
 ----------------------------------------------------------------
 -- generic definitions
@@ -180,12 +151,6 @@ delay x y = construct (del (struct x) (struct y))
   del (Object a)    ~(Object b)    = Object (delaySymbol (ops a) a b)
   del (Compound as) ~(Compound bs) = Compound (lazyZipWith del as bs)
 
-zeroify :: Generic a => a -> a
-zeroify x = construct (zero' (struct x))
- where
-  zero' (Object a)    = Object (zeroSymbol (ops a))
-  zero' (Compound as) = Compound [ zero' a | a <- as ]
-
 symbolize :: Generic a => String -> a -> a
 symbolize s x = construct (sym s (struct x))
  where
@@ -194,49 +159,20 @@ symbolize s x = construct (sym s (struct x))
                                   | (a,i) <- as `zip` [0:: Integer ..]
                                   ]
 
-pickSymbol :: Generic a => String -> a -> Symbol
-pickSymbol s a = pick (numbers s) (struct a)
- where
-  pick _      (Object a')   = a'
-  pick (n:ns) (Compound as) = pick ns (as !! n)
-  pick _      _             = undefined
-
-  numbers ('_':s') = let s1 = takeWhile (/= '_') s'
-                         s2 = dropWhile (/= '_') s'
-                     in  read s1 : numbers s2
-  numbers _       = undefined
-
-
 ----------------------------------------------------------------
 -- Constructive
-
-class ConstructiveSig a where
-  zeroSig   :: Signal a
-  varSig    :: String -> Signal a
 
 class Generic a => Constructive a where
   zero   :: a
   var    :: String -> a
 
-zeroList :: Constructive a => Int -> [a]
-zeroList n = replicate n zero
+instance  Constructive (Signal Bool) where
+  zero   = low
+  var    = varBool
 
-varList :: Constructive a => Int -> String -> [a]
-varList n s = [ var (s ++ "_" ++ show i) | i <- [0..(n-1)] ]
-
--- instances
-
-instance ConstructiveSig Bool where
-  zeroSig       = low
-  varSig        = varBool
-
-instance ConstructiveSig Int where
-  zeroSig     = int 0
-  varSig      = varInt
-
-instance ConstructiveSig a => Constructive (Signal a) where
-  zero   = zeroSig
-  var    = varSig
+instance  Constructive (Signal Int) where
+  zero   = int 0
+  var    = varInt
 
 instance Constructive () where
   zero       = ()
@@ -273,60 +209,10 @@ instance (Constructive a, Constructive b, Constructive c, Constructive d, Constr
   var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"), var (s ++ "_6"), var (s ++ "_7"))
 
 ----------------------------------------------------------------
--- Finite
-
-class ConstructiveSig a => FiniteSig a where
-  domainSig :: [Signal a]
-
-class Constructive a => Finite a where
-  domain :: [a]
-
-domainList :: Finite a => Int -> [[a]]
-domainList 0 = [[]]
-domainList n = [ a:as | a <- domain, as <- domainList (n-1) ]
-
--- instances
-
-instance FiniteSig Bool where
-  domainSig = [low, high]
-
-instance FiniteSig a => Finite (Signal a) where
-  domain = domainSig
-
-instance Finite () where
-  domain = [ () ]
-
-instance (Finite a, Finite b)
-      => Finite (a, b) where
-  domain = [ (a,b) | a <- domain, b <- domain ]
-
-instance (Finite a, Finite b, Finite c)
-      => Finite (a, b, c) where
-  domain = [ (a,b,c) | a <- domain, b <- domain, c <- domain ]
-
-instance (Finite a, Finite b, Finite c, Finite d)
-      => Finite (a, b, c, d) where
-  domain = [ (a,b,c,d) | a <- domain, b <- domain, c <- domain, d <- domain ]
-
-instance (Finite a, Finite b, Finite c, Finite d, Finite e)
-      => Finite (a, b, c, d, e) where
-  domain = [ (a,b,c,d,e) | a <- domain, b <- domain, c <- domain, d <- domain, e <- domain ]
-
-instance (Finite a, Finite b, Finite c, Finite d, Finite e, Finite f)
-      => Finite (a, b, c, d, e, f) where
-  domain = [ (a,b,c,d,e,f) | a <- domain, b <- domain, c <- domain, d <- domain, e <- domain, f <- domain ]
-
-instance (Finite a, Finite b, Finite c, Finite d, Finite e, Finite f, Finite g)
-      => Finite (a, b, c, d, e, f, g) where
-  domain = [ (a,b,c,d,e,f,g) | a <- domain, b <- domain, c <- domain, d <- domain, e <- domain, f <- domain, g <- domain ]
-
-----------------------------------------------------------------
 -- Choice
 
 class Choice a where
   ifThenElse :: Signal Bool -> (a, a) -> a
-
--- instances
 
 instance Choice Symbol where
   ifThenElse cond (x, y) = ifSymbol (ops x) cond (x, y)

@@ -5,9 +5,9 @@ module Lava.Netlist
   )
  where
 
+import Data.Traversable
 import Lava.Ref
 import Lava.Signal
-import Lava.Sequent
 
 import Lava.MyST
   ( ST
@@ -22,7 +22,8 @@ netlist phi symbols = fmap cata symbols
   cata (Symbol sym) = cata' sym
   cata'             = memoRef (phi . fmap cata . deref)
 
-netlistIO :: Sequent f => IO v -> (v -> S v -> IO ()) -> f Symbol -> IO (f v)
+netlistIO :: Traversable f => IO v -> (v -> S v -> IO ()) ->
+             f Symbol -> IO (f v)
 netlistIO new define symbols =
   do tab <- tableIO
 
@@ -32,13 +33,13 @@ netlistIO new define symbols =
                 Just v  -> do return v
                 Nothing -> do v <- new
                               extendIO tab sym v
-                              s <- mmap gather (deref sym)
+                              s <- traverse gather (deref sym)
                               define v s
                               return v
 
-      in mmap gather symbols
+      in traverse gather symbols
 
-netlistST :: Sequent f => ST s v -> (v -> S v -> ST s ()) -> f Symbol -> ST s (f v)
+netlistST :: Traversable f => ST s v -> (v -> S v -> ST s ()) -> f Symbol -> ST s (f v)
 netlistST new define symbols =
   do tab <- tableST
 
@@ -48,11 +49,11 @@ netlistST new define symbols =
                 Just v  -> do return v
                 Nothing -> do v <- new
                               extendST tab sym v
-                              s <- mmap gather (deref sym)
+                              s <- traverse gather (deref sym)
                               define v s
                               return v
 
-      in mmap gather symbols
+      in traverse gather symbols
 
 ----------------------------------------------------------------
 -- the end.

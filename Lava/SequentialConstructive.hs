@@ -6,7 +6,8 @@ module Lava.SequentialConstructive
 import Prelude hiding  (init)
 import Lava.Signal
 import Lava.Netlist
-import Lava.Sequent
+import Data.Foldable(toList)
+import Data.Traversable
 import Lava.Generic hiding (delay)
 import qualified Lava.Generic
 import Lava.Error
@@ -53,12 +54,12 @@ simulateCon circ inps = unsafePerformIO $
           do delay rwire init next
 
         define rwire sym =
-          case arguments sym of
+          case toList sym of
             []   -> addSet macro constant
             args -> sequence_ [ compWire rarg propagate | rarg <- args ]
          where
           propagate time =
-            do sym' <- mmap (`valueWire` time) sym
+            do sym' <- traverse (`valueWire` time) sym
                case evalLazy sym' of
                  Nothing -> return ()
                  Just v  -> updateWire rwire time v
@@ -121,7 +122,7 @@ simulateCon circ inps = unsafePerformIO $
     outs <- timedLazyLoop time0 $ \time ->
       do _ <- emptySet macro ($ time)
          while (emptySet micro ($ time))
-         s <- mmap (`actualValueWire` time) sr
+         s <- traverse (`actualValueWire` time) sr
          return (construct (symbol `fmap` s))
 
     let res = takes inps outs

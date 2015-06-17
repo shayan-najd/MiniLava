@@ -3,6 +3,7 @@ module Lava.Arithmetic where
 import Prelude hiding (abs,sum)
 import Lava
 import Lava.Library.Patterns
+import Lava.Library.Operators
 
 ----------------------------------------------------------------
 -- Basic Components

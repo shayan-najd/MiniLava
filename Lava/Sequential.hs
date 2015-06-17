@@ -5,7 +5,8 @@ module Lava.Sequential
 
 import Lava.Signal
 import Lava.Netlist
-import Lava.Sequent
+import Data.Foldable (toList)
+import Data.Traversable
 import Lava.Generic
 
 import Lava.MyST
@@ -52,8 +53,8 @@ simulateSeq circ inps = runST (
              DelayBool s' s'' -> delay' s' s''
              DelayInt  s' s'' -> delay' s' s''
              _ ->
-               do relate r (arguments s) $
-                    eval `fmap` mmap (readSTRef . fst) s
+               do relate r (toList s) $
+                    eval `fmap` traverse (readSTRef . fst) s
           where
            delay' ri@(rinit,_) r1@(pre,_) =
                do state <- newSTRef Nothing
@@ -76,11 +77,11 @@ simulateSeq circ inps = runST (
 
      sr   <- netlistST new define (struct (circ (input inps)))
      rs   <- readSTRef roots
-     step <- drive (flatten sr ++ rs)
+     step <- drive (toList sr ++ rs)
 
      outs <- lazyloop $
        do step
-          s <- mmap (fmap symbol . readSTRef . fst) sr
+          s <- traverse (fmap symbol . readSTRef . fst) sr
           return (construct s)
 
      let res = takes inps outs

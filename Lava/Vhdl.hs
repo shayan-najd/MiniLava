@@ -5,6 +5,7 @@ module Lava.Vhdl
   )
  where
 
+import Data.Foldable (toList)
 import Lava.Signal
 import Lava.Netlist
 import Lava.Generic
@@ -167,7 +168,7 @@ writeDefinitions file name inp out out' =
 
      sequence_
        [ define v' (VarBool v)
-       | (v,v') <- flatten outvs `zip` [ v' | VarBool v' <- outs' ]
+       | (v,v') <- toList outvs `zip` [ v' | VarBool v' <- outs' ]
        ]
 
      hPutStr secondHandle $ unlines $
@@ -181,7 +182,7 @@ writeDefinitions file name inp out out' =
      _ <- system ("rm " ++ firstFile ++ " " ++ secondFile)
      return ()
  where
-  sigs x = map unsymbol . flatten . struct $ x
+  sigs x = map unsymbol . toList . struct $ x
 
   inps  = sigs inp
   outs' = sigs out'

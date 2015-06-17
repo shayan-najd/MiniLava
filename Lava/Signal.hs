@@ -1,12 +1,17 @@
-module Lava.Signal where
+{-# LANGUAGE StandaloneDeriving,DeriveFunctor,DeriveFoldable,
+             DeriveTraversable,MultiParamTypeClasses,
+             FlexibleInstances,ScopedTypeVariables #-}
+module Lava.Signal (Signal(..),Symbol(..),S(..),symbol,unsymbol,varInt,
+                    varBool,int,high,low,andl,ifInt,delayInt,equalInt,
+                    delayBool,equalBool,ifBool,eval,evalLazy,neg,
+                    gteInt,divide,modulo,timesl,plusl,orl,inv,xorl)
+where
 
+import Prelude hiding (sequence,any,sum,product,all)
+import Data.Traversable
+import Data.Foldable
 import Lava.Ref
-import Lava.Sequent
 import Lava.Error
-
-import Data.List
-  ( transpose
-  )
 
 ----------------------------------------------------------------
 -- Signal, Symbol, S
@@ -38,14 +43,18 @@ data S s
   | VarInt   String
   | DelayInt s s
 
+deriving instance Functor S
+deriving instance Foldable S
+deriving instance Traversable S
+
 symbol :: S Symbol -> Symbol
 symbol = Symbol . ref
 
 unsymbol :: Symbol -> S Symbol
 unsymbol (Symbol r) = deref r
 
-instance Eq (Signal a) where
-  Signal (Symbol r1) == Signal (Symbol r2) = r1 == r2
+deriving instance Eq Symbol
+deriving instance Eq (Signal a)
 
 ----------------------------------------------------------------
 -- operations
@@ -55,31 +64,23 @@ instance Eq (Signal a) where
 bool :: Bool -> Signal Bool
 bool b = lift0 (Bool b)
 
-low, high :: Signal Bool
-low  = bool False
-high = bool True
-
 inv :: Signal Bool -> Signal Bool
 inv = lift1 Inv
 
-andl, orl, xorl :: [Signal Bool] -> Signal Bool
+andl :: [Signal Bool] -> Signal Bool
 andl = liftl And
+
+orl :: [Signal Bool] -> Signal Bool
 orl  = liftl Or
+
+xorl :: [Signal Bool] -> Signal Bool
 xorl = liftl Xor
-
-equalBool :: Signal Bool -> Signal Bool -> Signal Bool
-equalBool x y = inv (xorl [x,y])
-
-ifBool :: Signal Bool -> (Signal Bool, Signal Bool) -> Signal Bool
-ifBool c (x,y) = orl[andl[c,x],andl[inv c,y]]
-
-delayBool :: Signal Bool -> Signal Bool -> Signal Bool
-delayBool = lift2 DelayBool
 
 varBool :: String -> Signal Bool
 varBool s = lift0 (VarBool s)
 
--- on ints
+delayBool :: Signal Bool -> Signal Bool -> Signal Bool
+delayBool = lift2 DelayBool
 
 int :: Int -> Signal Int
 int n = lift0 (Int n)
@@ -87,31 +88,32 @@ int n = lift0 (Int n)
 neg :: Signal Int -> Signal Int
 neg = lift1 Neg
 
-divide, modulo :: Signal Int -> Signal Int -> Signal Int
+divide :: Signal Int -> Signal Int -> Signal Int
 divide = lift2 Div
+
+modulo :: Signal Int -> Signal Int -> Signal Int
 modulo = lift2 Mod
 
-plusl, timesl :: [Signal Int] -> Signal Int
+plusl :: [Signal Int] -> Signal Int
 plusl  = liftl Plus
-timesl = liftl Times
 
-equall :: [Signal Int] -> Signal Bool
-equall = liftl Equal
+timesl :: [Signal Int] -> Signal Int
+timesl = liftl Times
 
 gteInt :: Signal Int -> Signal Int -> Signal Bool
 gteInt = lift2 Gte
 
-equalInt :: Signal Int -> Signal Int -> Signal Bool
-equalInt x y = equall [x,y]
+equall :: [Signal Int] -> Signal Bool
+equall = liftl Equal
 
 ifInt :: Signal Bool -> (Signal Int, Signal Int) -> Signal a
 ifInt c (x,y) = lift3 If c x y
 
-delayInt :: Signal Int -> Signal Int -> Signal Int
-delayInt = lift2 DelayInt
-
 varInt :: String -> Signal Int
 varInt s = lift0 (VarInt s)
+
+delayInt :: Signal Int -> Signal Int -> Signal Int
+delayInt = lift2 DelayInt
 
 -- liftings
 
@@ -132,13 +134,56 @@ liftl :: ([Symbol] -> S Symbol) -> [Signal a] -> Signal c
 liftl oper sigas = Signal (symbol (oper (map (\(Signal a) -> a) sigas)))
 
 ----------------------------------------------------------------
+-- smart constructors
+
+low :: Signal Bool
+low  = bool False
+
+high :: Signal Bool
+high = bool True
+
+ifBool :: Signal Bool -> (Signal Bool, Signal Bool) -> Signal Bool
+ifBool c (x,y) = orl[andl[c,x],andl[inv c,y]]
+
+equalBool :: Signal Bool -> Signal Bool -> Signal Bool
+equalBool x y = inv (xorl [x,y])
+
+equalInt :: Signal Int -> Signal Int -> Signal Bool
+equalInt x y = equall [x,y]
+
+
+----------------------------------------------------------------
 -- evaluate
+
+class Lift a b where
+  lift :: S b ->  a
+
+instance Lift Bool b where
+  lift (Bool b) = b
+  lift _        = undefined
+
+instance Lift Int b where
+  lift (Int i) = i
+  lift _       = undefined
+
+class CoLift a b where
+  coLift :: a -> S b
+
+instance CoLift Bool b where
+  coLift = Bool
+
+instance CoLift Int b where
+  coLift = Int
+
+liftF1 :: (Lift a c , CoLift b c) => (a -> b) -> S c -> S c
+liftF1 f = coLift . f . lift
+
 
 eval :: S (S a) -> S a
 eval s =
   case s of
     Bool b       -> Bool b
-    Inv (Bool b) -> Bool (not b)
+    Inv  b       -> liftF1 not b
     And xs       -> Bool . all bval $ xs
     Or xs        -> Bool . any bval $ xs
     Xor xs       -> Bool . (1 ==) . length . filter bval $ xs
@@ -151,7 +196,7 @@ eval s =
     Times xs              -> Int  . product . map nval $ xs
     Gte (Int n1) (Int n2) -> Bool (n1 >= n2)
     Equal xs              -> Bool . equal   . map nval $ xs
-    If (Bool c) x y       -> if c then x else y
+    If c x y              -> if bval c then x else y
 
     DelayBool _ _  -> wrong Lava.Error.DelayEval
     DelayInt  _ _  -> wrong Lava.Error.DelayEval
@@ -182,7 +227,7 @@ evalLazy s =
       | number (`bval` True) xs >= 2 -> bans False
 
     -- strict
-    _ -> eval `fmap` sequent s
+    _ -> eval `fmap` sequence s
 
  where
   bans = Just . Bool
@@ -191,127 +236,6 @@ evalLazy s =
   bval _               _  = False
 
   number p = length . filter p
-
-arguments :: S a -> [a]
-arguments s =
-  case s of
-    Bool _     -> []
-    Inv s'     -> [s']
-    And xs     -> xs
-    Or xs      -> xs
-    Xor xs     -> xs
-
-    Int _      -> []
-    Neg s'     -> [s']
-    Div s1 s2  -> [s1,s2]
-    Mod s1 s2  -> [s1,s2]
-    Plus xs    -> xs
-    Times xs   -> xs
-    Gte x y    -> [x,y]
-    Equal xs   -> xs
-    If x y z   -> [x,y,z]
-
-    DelayBool s' s'' -> [s',s'']
-    DelayInt  s' s'' -> [s',s'']
-    VarBool _      -> []
-    VarInt  _      -> []
-
-zips :: S [a] -> [S a]
-zips s =
-  case s of
-    Bool b     -> [Bool b]
-    Inv s'     -> map Inv s'
-    And xs     -> map And (transpose xs)
-    Or xs      -> map Or  (transpose xs)
-    Xor xs     -> map Xor (transpose xs)
-
-    Int n      -> [Int n]
-    Neg s'     -> map Neg s'
-    Div s1 s2  -> zipWith Div s1 s2
-    Mod s1 s2  -> zipWith Mod s1 s2
-    Plus xs    -> map Plus  (transpose xs)
-    Times xs   -> map Times (transpose xs)
-    Gte x y    -> zipWith Gte x y
-    Equal xs   -> map Equal (transpose xs)
-    If x y z   -> zipWith3 If x y z
-
-    DelayBool s' s'' -> zipWith DelayBool s' s''
-    DelayInt  s' s'' -> zipWith DelayInt s' s''
-    VarBool s'      -> [VarBool s']
-    VarInt  s'      -> [VarInt  s']
-
-----------------------------------------------------------------
--- properties of S
-
-instance Functor S where
-  fmap f s =
-    case s of
-      Bool b    -> Bool b
-      Inv x     -> Inv (f x)
-      And xs    -> And (map f xs)
-      Or  xs    -> Or  (map f xs)
-      Xor xs    -> Xor (map f xs)
-
-      Int   n   -> Int n
-      Neg   x   -> Neg   (f x)
-      Div   x y -> Div   (f x) (f y)
-      Mod   x y -> Mod   (f x) (f y)
-      Plus  xs  -> Plus  (map f xs)
-      Times xs  -> Times (map f xs)
-      Gte   x y -> Gte (f x) (f y)
-      Equal xs  -> Equal (map f xs)
-      If x y z  -> If (f x) (f y) (f z)
-
-      DelayBool x y -> DelayBool (f x) (f y)
-      DelayInt  x y -> DelayInt  (f x) (f y)
-      VarBool   v   -> VarBool v
-      VarInt    v   -> VarInt  v
-
-instance Sequent S where
-  sequent s =
-    case s of
-      Bool b    -> lft0 (Bool b)
-      Inv x     -> lft1 Inv x
-      And xs    -> lftl And xs
-      Or  xs    -> lftl Or  xs
-      Xor xs    -> lftl Xor xs
-
-      Int   n   -> lft0 (Int n)
-      Neg   x   -> lft1 Neg   x
-      Div   x y -> lft2 Div   x y
-      Mod   x y -> lft2 Mod   x y
-      Plus  xs  -> lftl Plus  xs
-      Times xs  -> lftl Times xs
-      Gte   x y -> lft2 Gte   x y
-      Equal xs  -> lftl Equal xs
-      If x y z  -> lft3 If x y z
-
-      DelayBool x y -> lft2 DelayBool x y
-      DelayInt  x y -> lft2 DelayInt x y
-      VarBool  v    -> lft0 (VarBool v)
-      VarInt   v    -> lft0 (VarInt v)
-   where
-    lft0 op =
-      do return op
-
-    lft1 op x =
-      do x' <- x
-         return (op x')
-
-    lft2 op x y =
-      do x' <- x
-         y' <- y
-         return (op x' y')
-
-    lft3 op x y z =
-      do x' <- x
-         y' <- y
-         z' <- z
-         return (op x' y' z')
-
-    lftl op xs =
-      do xs' <- sequence xs
-         return (op xs')
 
 instance Show (Signal a) where
   showsPrec n (Signal s) =

@@ -3,7 +3,7 @@ module Lava.Combinational where
 import Lava.Generic
 import Lava.Signal
 import Lava.Netlist
-import Lava.Sequent
+import Data.Traversable
 import Lava.Error
 
 import Lava.MyST
@@ -19,7 +19,7 @@ import Lava.MyST
 simulate :: Generic b => (a -> b) -> a -> b
 simulate circ inp = runST (
   do sr <- netlistST new define (struct (circ inp))
-     sa <- mmap (fmap symbol . readSTRef) sr
+     sa <- traverse (fmap symbol . readSTRef) sr
      let res = construct sa
      return res
   )
@@ -28,7 +28,7 @@ simulate circ inp = runST (
     newSTRef (wrong Lava.Error.CombinationalLoop)
 
   define r s =
-    do s' <- mmap readSTRef s
+    do s' <- traverse readSTRef s
        writeSTRef r (eval s')
 
 ----------------------------------------------------------------

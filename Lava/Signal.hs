@@ -1,18 +1,22 @@
 {-# LANGUAGE StandaloneDeriving,DeriveFunctor,DeriveFoldable,
              DeriveTraversable,MultiParamTypeClasses,
              FlexibleInstances,ScopedTypeVariables #-}
-module Lava.Signal (Signal(..),Symbol(..),S(..),symbol,unsymbol,varInt,
-                    varBool,int,high,low,andl,ifInt,delayInt,equalInt,
-                    delayBool,equalBool,ifBool,eval,evalLazy,neg,
-                    gteInt,divide,modulo,timesl,plusl,orl,inv,xorl)
+module Lava.Signal (Signal(..),Symbol(..),S(..),symbol,unsymbol,
+                    bool,inv,andl,orl,xorl,varBool,delayBool,
+                    int,neg,divide,modulo,plusl,timesl,gteInt,
+                    equall,ifInt,
+                    varInt,delayInt,
+                    high,low,ifBool,equalBool,equalInt,
+                    eval
+                    )
 where
 
-import Prelude hiding (sequence,any,sum,product,all)
+import Prelude hiding (sequence,any,sum,product,all,and,or,foldl)
 import Data.Traversable
 import Data.Foldable
+import Data.List(nub)
 import Lava.Ref
 import Lava.Error
-
 ----------------------------------------------------------------
 -- Signal, Symbol, S
 
@@ -115,6 +119,7 @@ varInt s = lift0 (VarInt s)
 delayInt :: Signal Int -> Signal Int -> Signal Int
 delayInt = lift2 DelayInt
 
+----------------------------------------------------------------
 -- liftings
 
 lift0 :: S Symbol -> Signal a
@@ -178,64 +183,38 @@ instance CoLift Int b where
 liftF1 :: (Lift a c , CoLift b c) => (a -> b) -> S c -> S c
 liftF1 f = coLift . f . lift
 
+liftF2 :: (Lift a d , Lift b d , CoLift c d) => (a -> b -> c) -> S d -> S d -> S d
+liftF2 f x y = coLift (f (lift x) (lift y))
+
+liftF3 :: (Lift a e , Lift b e , Lift c e , CoLift d e) => (a -> b -> c -> d) -> S e -> S e -> S e -> S e
+liftF3 f x y z = coLift (f (lift x) (lift y) (lift z))
+
+liftFL :: (CoLift b c , Lift a c) => ([a] -> b) -> [S c] -> S c
+liftFL f = coLift . f . fmap lift
 
 eval :: S (S a) -> S a
 eval s =
   case s of
-    Bool b       -> Bool b
+    Bool b       -> coLift b
     Inv  b       -> liftF1 not b
-    And xs       -> Bool . all bval $ xs
-    Or xs        -> Bool . any bval $ xs
-    Xor xs       -> Bool . (1 ==) . length . filter bval $ xs
+    And xs       -> liftFL and xs
+    Or xs        -> liftFL or  xs
+    Xor xs       -> liftFL (foldl (\ x y -> if x then not y else y) True) xs
 
-    Int n                 -> Int n
-    Neg (Int n)           -> Int (-n)
-    Div (Int n1) (Int n2) -> Int (n1 `div` n2)
-    Mod (Int n1) (Int n2) -> Int (n1 `mod` n2)
-    Plus xs               -> Int  . sum     . map nval $ xs
-    Times xs              -> Int  . product . map nval $ xs
-    Gte (Int n1) (Int n2) -> Bool (n1 >= n2)
-    Equal xs              -> Bool . equal   . map nval $ xs
-    If c x y              -> if bval c then x else y
+    Int n        -> coLift n
+    Neg n        -> liftF1 (negate :: Int -> Int) n
+    Div n1 n2    -> liftF2 (div :: Int -> Int -> Int) n1 n2
+    Mod n1 n2    -> liftF2 (mod :: Int -> Int -> Int) n1 n2
+    Plus xs      -> liftFL (sum :: [Int] -> Int) xs
+    Times xs     -> liftFL (product :: [Int] -> Int) xs
+    Gte n1 n2    -> liftF2 ((>=) :: Int -> Int -> Bool) n1 n2
+    Equal xs     -> liftFL (((<= 1) . length  . nub)  :: [Int] -> Bool) xs
+    If l m n     -> liftF3 ((\ x y z -> if x then y else z) :: Bool -> Int -> Int -> Int) l m n
 
-    DelayBool _ _  -> wrong Lava.Error.DelayEval
-    DelayInt  _ _  -> wrong Lava.Error.DelayEval
-    VarBool   _    -> wrong Lava.Error.VarEval
-    VarInt    _    -> wrong Lava.Error.VarEval
-    _              -> undefined
- where
-  bval (Bool b) = b
-  bval _        = undefined
-
-  nval (Int n)  = n
-  nval _        = undefined
-
-  equal (x:y:xs) = x == y && equal (y:xs)
-  equal _        = True
-
-evalLazy :: S (Maybe (S a)) -> Maybe (S a)
-evalLazy s =
-  case s of
-    -- lazy
-    And xs
-      | any (`bval` False) xs        -> bans False
-
-    Or xs
-      | any (`bval` True) xs         -> bans True
-
-    Xor xs
-      | number (`bval` True) xs >= 2 -> bans False
-
-    -- strict
-    _ -> eval `fmap` sequence s
-
- where
-  bans = Just . Bool
-
-  bval (Just (Bool b)) b' = b == b'
-  bval _               _  = False
-
-  number p = length . filter p
+    DelayBool _ _ -> wrong Lava.Error.DelayEval
+    DelayInt  _ _ -> wrong Lava.Error.DelayEval
+    VarBool   _   -> wrong Lava.Error.VarEval
+    VarInt    _   -> wrong Lava.Error.VarEval
 
 instance Show (Signal a) where
   showsPrec n (Signal s) =

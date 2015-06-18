@@ -199,7 +199,7 @@ eval s =
     Inv  b       -> liftF1 not b
     And xs       -> liftFL and xs
     Or xs        -> liftFL or  xs
-    Xor xs       -> liftFL (foldl (\ x y -> if x then not y else y) True) xs
+    Xor xs       -> liftFL ((1 ==) . length . filter id) xs
 
     Int n        -> coLift n
     Neg n        -> liftF1 (negate :: Int -> Int) n

@@ -10,6 +10,7 @@ import Lava.Signal
 import Lava.Netlist
 import Lava.Generic
 import Lava.Error
+import Control.Monad.Writer
 
 import Data.List
   ( intersperse
@@ -104,15 +105,46 @@ writeDefinitions file name inp out out' =
        [ "begin"
        ]
 
-     let new =
-           do n <- readIORef var'
-              let n' = n + (1 :: Integer)
-                  v = "w" ++ show n'
-              writeIORef var' n'
-              hPutStr firstHandle ("  signal " ++ v ++ " : bit;\n")
-              return v
+     outvs <- netlistIO (new var' firstHandle) (\ x y -> hPutStr secondHandle $ snd $ runWriter $ define x y) (struct out)
 
-         define v s =
+     hPutStr secondHandle $
+       (unlines
+       [ ""
+       , "  -- naming outputs"
+       ]) ++
+       (concat
+       [snd $ runWriter $ define v' (VarBool v)
+       | (v,v') <- toList outvs `zip` [ v' | VarBool v' <- outs' ]
+       ]) ++
+       unlines
+       [ "end structural;"
+       ]
+
+     hClose firstHandle
+     hClose secondHandle
+
+     _ <- system ("cat " ++ firstFile ++ " " ++ secondFile ++ " > " ++ file)
+     _ <- system ("rm " ++ firstFile ++ " " ++ secondFile)
+     return ()
+ where
+  sigs x = map unsymbol . toList . struct $ x
+
+  inps  = sigs inp
+  outs' = sigs out'
+
+  firstFile  = file ++ "-1"
+  secondFile = file ++ "-2"
+
+new var' firstHandle = do n <- readIORef var'
+                          let n' = n + (1 :: Integer)
+                              v = "w" ++ show n'
+                          writeIORef var' n'
+                          hPutStr firstHandle ("  signal " ++ v ++ " : bit;\n")
+                          return v
+
+
+define :: [Char] -> S [Char] -> Writer String ()
+define v s =
            case s of
              Bool True     -> port "vdd"  []
              Bool False    -> port "gnd"  []
@@ -151,7 +183,7 @@ writeDefinitions file name inp out out' =
             w i = v ++ "_" ++ show i
 
             port name' args =
-              do hPutStr secondHandle $
+              do tell $
                       "  "
                    ++ make 9 ("c_" ++ v)
                    ++ " : entity "
@@ -159,38 +191,8 @@ writeDefinitions file name inp out out' =
                    ++ " port map ("
                    ++ concat (intersperse ", " ("clk" : args ++ [v]))
                    ++ ");\n"
+            make n ss = take (n `max` length ss) (ss ++ repeat ' ')
 
-     outvs <- netlistIO new define (struct out)
-     hPutStr secondHandle $ unlines $
-       [ ""
-       , "  -- naming outputs"
-       ]
-
-     sequence_
-       [ define v' (VarBool v)
-       | (v,v') <- toList outvs `zip` [ v' | VarBool v' <- outs' ]
-       ]
-
-     hPutStr secondHandle $ unlines $
-       [ "end structural;"
-       ]
-
-     hClose firstHandle
-     hClose secondHandle
-
-     _ <- system ("cat " ++ firstFile ++ " " ++ secondFile ++ " > " ++ file)
-     _ <- system ("rm " ++ firstFile ++ " " ++ secondFile)
-     return ()
- where
-  sigs x = map unsymbol . toList . struct $ x
-
-  inps  = sigs inp
-  outs' = sigs out'
-
-  firstFile  = file ++ "-1"
-  secondFile = file ++ "-2"
-
-  make n s = take (n `max` length s) (s ++ repeat ' ')
 
 
 ----------------------------------------------------------------

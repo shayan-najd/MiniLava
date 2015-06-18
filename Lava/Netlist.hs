@@ -34,24 +34,24 @@ netListM :: (Traversable f, Applicative m, Monad m) =>
             -> m (f b)
 netListM tableM findM extendM new define symbols =
   do tab <- tableM
-     traverse (gather new define tab findM extendM) symbols
+     traverse (gather tab findM extendM  new define) symbols
 
 gather :: (Applicative m, Monad m) =>
-          m b
+          table
+          -> (table -> Ref (S Symbol) -> m (Maybe b))
+          -> (table -> Ref (S Symbol) -> b -> m ())
+          -> m b
           -> (b -> S b -> m ())
-          -> a
-          -> (a -> Ref (S Symbol) -> m (Maybe b))
-          -> (a -> Ref (S Symbol) -> b -> m ())
           -> Symbol
           -> m b
-gather new define tab findM extendM (Symbol sym) =
+gather tab findM extendM new define (Symbol sym) =
            do visited <- findM tab sym
               case visited of
                 Just v  -> do return v
                 Nothing -> do v <- new
                               extendM tab sym v
                               s <- traverse
-                                   (gather new define tab findM extendM)
+                                   (gather tab findM extendM new define)
                                    (deref sym)
                               define v s
                               return v

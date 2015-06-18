@@ -8,6 +8,7 @@ import Lava.Netlist
 import Data.Foldable (toList)
 import Data.Traversable
 import Lava.Generic
+import Control.Applicative
 
 import Lava.MyST
   ( ST
@@ -39,14 +40,8 @@ simulateSeq _    []   = []
 simulateSeq circ inps = runST (
   do roots <- newSTRef []
 
-     let root r =
-           do rs <- readSTRef roots
-              writeSTRef roots (r:rs)
-
-         new =
-           do rval <- newSTRef (error "val?")
-              rwir <- newSTRef (error "wire?")
-              return (rval, rwir)
+     let new = (,) <$> newSTRef (error "val?")
+                   <*> newSTRef (error "wire?")
 
          define r s =
            case s of
@@ -59,7 +54,8 @@ simulateSeq circ inps = runST (
            delay' ri@(rinit,_) r1@(pre,_) =
                do state <- newSTRef Nothing
                   r2 <- new
-                  root r2
+                  rs <- readSTRef roots
+                  writeSTRef roots (r2:rs)
 
                   relate r [ri] $
                     do ms <- readSTRef state
@@ -84,8 +80,7 @@ simulateSeq circ inps = runST (
           s <- traverse (fmap symbol . readSTRef . fst) sr
           return (construct s)
 
-     let res = takes inps outs
-     return res
+     return (takes inps outs)
   )
 
 -- evaluation order

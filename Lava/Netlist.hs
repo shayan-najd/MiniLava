@@ -1,17 +1,17 @@
 module Lava.Netlist
   ( netlistIO
   , netlistST
+  , netgraph
+  , netgraphF
   )
  where
 
+import Lava.Generic
 import Control.Applicative
 import Data.Traversable
 import Lava.Ref
 import Lava.Signal
-
 import Lava.MyST
-  ( ST
-  )
 
 ----------------------------------------------------------------
 -- netlist
@@ -55,6 +55,38 @@ gather tab findM extendM new define (Symbol sym) =
                                    (deref sym)
                               define v s
                               return v
+
+netgraphF :: (Constructive a,Generic b) =>
+            (a -> b) -> [(Integer,S Integer)]
+netgraphF f = runST $
+             do counter <- newSTRef 0
+                nodes   <- newSTRef []
+                _       <- netlistST
+                           (do n <- readSTRef counter
+                               let n' = n + (1 :: Integer)
+                               writeSTRef counter n'
+                               return n')
+                           (\ v s -> do l <- readSTRef nodes
+                                        writeSTRef nodes (l ++ [(v,s)]))
+                           (struct $ f $ var "inp")
+                readSTRef nodes
+
+netgraph :: Generic a => a -> ([(Integer, S Integer)], Struct Integer)
+netgraph s = runST $
+             do counter <- newSTRef 0
+                nodes   <- newSTRef []
+                r       <- netlistST
+                           (do n <- readSTRef counter
+                               let n' = n + (1 :: Integer)
+                               writeSTRef counter n'
+                               return n')
+                           (\ v ss -> do l <- readSTRef nodes
+                                         writeSTRef nodes (l ++ [(v,ss)]))
+                           (struct $ s)
+                ns <- readSTRef nodes
+                return (ns , r)
+
+
 
 ----------------------------------------------------------------
 -- the end.

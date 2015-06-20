@@ -1,7 +1,5 @@
 module Lava.Netlist
-  ( netlistIO
-  , netlistST
-  , netgraph
+  ( netgraph
   , netgraphF
   )
  where
@@ -15,10 +13,6 @@ import Lava.MyST
 
 ----------------------------------------------------------------
 -- netlist
-
-netlistIO :: Traversable f => IO v -> (v -> S v -> IO ()) ->
-             f Symbol -> IO (f v)
-netlistIO = netListM tableIO findIO extendIO
 
 netlistST :: Traversable f => ST s v -> (v -> S v -> ST s ()) ->
              f Symbol -> ST s (f v)
@@ -57,25 +51,14 @@ gather tab findM extendM new define (Symbol sym) =
                               return v
 
 netgraphF :: (Constructive a,Generic b) =>
-            (a -> b) -> [(Integer,S Integer)]
-netgraphF f = runST $
-             do counter <- newSTRef 0
-                nodes   <- newSTRef []
-                _       <- netlistST
-                           (do n <- readSTRef counter
-                               let n' = n + (1 :: Integer)
-                               writeSTRef counter n'
-                               return n')
-                           (\ v s -> do l <- readSTRef nodes
-                                        writeSTRef nodes (l ++ [(v,s)]))
-                           (struct $ f $ var "inp")
-                readSTRef nodes
+            (a -> b) -> ([(Integer,S Integer)] , Struct Integer)
+netgraphF f = netgraph (f (var "inp"))
 
 netgraph :: Generic a => a -> ([(Integer, S Integer)], Struct Integer)
 netgraph s = runST $
              do counter <- newSTRef 0
                 nodes   <- newSTRef []
-                r       <- netlistST
+                rs      <- netlistST
                            (do n <- readSTRef counter
                                let n' = n + (1 :: Integer)
                                writeSTRef counter n'
@@ -84,7 +67,7 @@ netgraph s = runST $
                                          writeSTRef nodes (l ++ [(v,ss)]))
                            (struct $ s)
                 ns <- readSTRef nodes
-                return (ns , r)
+                return (ns , rs)
 
 
 

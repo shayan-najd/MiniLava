@@ -3,6 +3,7 @@ module Lava.Sequential
   )
  where
 
+import Prelude hiding (sequence)
 import Lava.Signal
 import Lava.Netlist
 import Data.Foldable (toList)
@@ -35,59 +36,77 @@ data Wire s
 ----------------------------------------------------------------
 -- simulate
 
-simulateSeq :: (Generic a, Generic b) => (a -> b) -> [a] -> [b]
+lookupFrom :: Eq a => [(a , b)] -> a -> b
+lookupFrom xys x = let Just y = lookup x xys
+                   in  y
+
+simulateSeq :: (Constructive a , Generic a, Generic b) => (a -> b) -> [a] -> [b]
 simulateSeq _    []   = []
 simulateSeq circ inps = runST (
-  do roots <- newSTRef []
-
-     let new = (,) <$> newSTRef (error "val?")
-                   <*> newSTRef (error "wire?")
-
-         define r s =
-           case s of
-             DelayBool s' s'' -> delay' s' s''
-             DelayInt  s' s'' -> delay' s' s''
-             _ ->
-               do relate r (toList s) $
-                    eval `fmap` traverse (readSTRef . fst) s
-          where
-           delay' ri@(rinit,_) r1@(pre,_) =
-               do state <- newSTRef Nothing
-                  r2 <- new
-                  rs <- readSTRef roots
-                  writeSTRef roots (r2:rs)
-
-                  relate r [ri] $
-                    do ms <- readSTRef state
-                       case ms of
-                         Just s' -> return s'
-                         Nothing ->
-                           do s' <- readSTRef rinit
-                              writeSTRef state (Just s')
-                              return s'
-
-                  relate r2 [r,r1] $
-                    do s' <- readSTRef pre
-                       writeSTRef state (Just s')
-                       return s'
-
-     sr   <- netlistST new define (struct (circ (input inps)))
+  do
+     let (g , rt) = netgraph (circ (input inps))
+     tbl   <- sequence [do r <- new
+                           return (x , r)
+                       | (x , _)  <- g]
+     let g' = [( lookupFrom tbl x
+               , fmap (lookupFrom tbl) s)
+              | (x , s) <- g]
+     let sr = fmap (lookupFrom tbl) rt
+     roots <- newSTRef []
+     sequence_ [define roots x s | (x , s) <- g']
      rs   <- readSTRef roots
      step <- drive (toList sr ++ rs)
-
      outs <- lazyloop $
        do step
           s <- traverse (fmap symbol . readSTRef . fst) sr
           return (construct s)
 
-     return (takes inps outs)
-  )
+     return (takes inps outs))
+
+new :: ST s (Var s)
+new = (,) <$> newSTRef (error "val?")
+          <*> newSTRef (error "wire?")
+
+define :: STRef s [Var s] ->
+          Var s -> S (Var s) -> ST s ()
+define roots r s =
+           case s of
+             DelayBool s' s'' -> delay' roots r s' s''
+             DelayInt  s' s'' -> delay' roots r s' s''
+             _ -> relate r (toList s) $
+                  fmap eval $ traverse (readSTRef . fst) s
+
+delay' :: STRef s [Var s]
+          -> Var s
+          -> Var s
+          -> Var s
+          -> ST s ()
+delay' roots r ri@(rinit,_) r1@(pre,_) =
+  do state <- newSTRef Nothing
+     r2    <- new
+     rs    <- readSTRef roots
+     writeSTRef roots (r2:rs)
+
+     relate r [ri] $
+       do ms <- readSTRef state
+          case ms of
+           Just s' -> return s'
+           Nothing ->
+             do s' <- readSTRef rinit
+                writeSTRef state (Just s')
+                return s'
+
+     relate r2 [r,r1] $
+       do s' <- readSTRef pre
+          writeSTRef state (Just s')
+          return s'
+
 
 -- evaluation order
 
 relate :: Var s -> [Var s] -> ST s (S Symbol) -> ST s ()
 relate (rval, rwir) rs f =
-  do writeSTRef rwir $
+  writeSTRef rwir $
        Wire{ dependencies = rs
            , kick = do b <- f
                        writeSTRef rval b

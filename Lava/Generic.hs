@@ -80,53 +80,22 @@ instance (Generic a, Generic b, Generic c, Generic d, Generic e, Generic f, Gene
 ----------------------------------------------------------------
 -- Ops
 
-data Ops
-  = Ops { equalSymbol :: Symbol -> Symbol -> Signal Bool
-        , delaySymbol :: Symbol -> Symbol -> Symbol
-        , ifSymbol    :: Signal Bool -> (Symbol, Symbol) -> Symbol
-        , varSymbol   :: String -> Symbol
-        }
 
-opsBool :: Ops
-opsBool =
-  Ops { equalSymbol = \x y     -> equalBool (Signal x) (Signal y)
-      , delaySymbol = \x y     -> unSignal $ delayBool (Signal x) (Signal y)
-      , ifSymbol    = \c (x,y) -> unSignal $ ifBool c  (Signal x,  Signal y)
-      , varSymbol   = \s       -> symbol (VarBool s)
-      }
+equalSymbol :: Type -> Symbol -> Symbol -> Signal Bool
+equalSymbol TBool x y = equalBool (Signal x) (Signal y)
+equalSymbol TInt  x y = equalInt  (Signal x) (Signal y)
 
-opsInt :: Ops
-opsInt =
-  Ops { equalSymbol = \x y     -> equalInt (Signal x) (Signal y)
-      , delaySymbol = \x y     -> unSignal $ delayInt (Signal x) (Signal y)
-      , ifSymbol    = \c (x,y) -> unSignal $ ifInt c  (Signal x,  Signal y)
-      , varSymbol   = \s       -> symbol (VarInt s)
-      }
+delaySymbol :: Type -> Symbol -> Symbol -> Symbol
+delaySymbol TBool x y = unSignal $ delayBool (Signal x) (Signal y)
+delaySymbol TInt  x y = unSignal $ delayInt (Signal x) (Signal y)
 
-unSignal :: Signal a -> Symbol
-unSignal (Signal s) = s
+ifSymbol :: Type -> Signal Bool -> (Symbol, Symbol) -> Symbol
+ifSymbol TBool c (x , y) = unSignal $ ifBool c  (Signal x,  Signal y)
+ifSymbol TInt  c (x , y) = unSignal $ ifInt c  (Signal x,  Signal y)
 
-ops :: Symbol -> Ops
-ops s =
-  case unsymbol s of
-    Bool _        -> opsBool
-    Inv _         -> opsBool
-    And _ _       -> opsBool
-    Or _ _        -> opsBool
-    Xor _ _       -> opsBool
-    Int _         -> opsInt
-    Neg _         -> opsInt
-    Div _ _       -> opsInt
-    Mod _ _       -> opsInt
-    Plus _ _      -> opsInt
-    Times _ _     -> opsInt
-    Gte _ _       -> opsBool
-    Equal _ _     -> opsBool
-    If _ _ _      -> opsInt
-    DelayBool _ _ -> opsBool
-    DelayInt  _ _ -> opsInt
-    VarBool _     -> opsBool
-    VarInt  _     -> opsInt
+varSymbol :: Type -> String -> Symbol
+varSymbol TBool s  = symbol (VarBool s)
+varSymbol TInt  s  = symbol (VarInt s)
 
 ----------------------------------------------------------------
 -- generic definitions
@@ -134,7 +103,7 @@ ops s =
 equal :: Generic a => (a, a) -> Signal Bool
 equal (x, y) = eq (struct x) (struct y)
  where
-  eq (Object a)    (Object b)    = equalSymbol (ops a) a b
+  eq (Object a)    (Object b)    = equalSymbol (getType $ unsymbol a) a b
   eq (Compound as) (Compound bs) = eqs as bs
   eq _             _             = low
 
@@ -145,13 +114,13 @@ equal (x, y) = eq (struct x) (struct y)
 delay :: Struct Symbol -> Struct Symbol -> Struct Symbol
 delay x y = del x y
  where
-  del (Object a)    ~(Object b)    = Object (delaySymbol (ops a) a b)
+  del (Object a)    ~(Object b)    = Object (delaySymbol (getType $ unsymbol a) a b)
   del (Compound as) ~(Compound bs) = Compound (lazyZipWith del as bs)
 
 symbolize :: String -> Struct Symbol -> Struct Symbol
 symbolize s x = sym s x
  where
-  sym s' (Object a)    = Object (varSymbol (ops a) s')
+  sym s' (Object a)    = Object (varSymbol (getType $ unsymbol a) s')
   sym s' (Compound as) = Compound [ sym (s' ++ "_" ++ show i) a
                                   | (a,i) <- as `zip` [0:: Integer ..]
                                   ]
@@ -212,7 +181,7 @@ class Choice a where
   ifThenElse :: Signal Bool -> (a, a) -> a
 
 instance Choice Symbol where
-  ifThenElse cond (x, y) = ifSymbol (ops x) cond (x, y)
+  ifThenElse cond (x, y) = ifSymbol (getType $ unsymbol x) cond (x, y)
 
 instance Choice (Signal a) where
   ifThenElse cond (Signal x, Signal y) =

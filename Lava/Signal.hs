@@ -7,7 +7,8 @@ module Lava.Signal (Signal(..),Symbol(..),S(..),symbol,unsymbol,
                     ifInt,
                     varInt,delayInt,
                     high,low,ifBool,equalBool,equalInt,
-                    eval
+                    eval,
+                    getType,Type(..)
                     )
 where
 
@@ -20,7 +21,7 @@ import Lava.Error
 -- Signal, Symbol, S
 
 newtype Signal a
-  = Signal Symbol
+  = Signal {unSignal :: Symbol}
 
 newtype Symbol
   = Symbol (Ref (S Symbol))
@@ -58,6 +59,8 @@ unsymbol (Symbol r) = deref r
 
 deriving instance Eq Symbol
 deriving instance Eq (Signal a)
+
+data Type = TBool | TInt
 
 ----------------------------------------------------------------
 -- operations
@@ -221,3 +224,25 @@ deriving instance Show a => Show (S a )
 
 ----------------------------------------------------------------
 -- the end.
+
+getType :: S a -> Type
+getType s =
+  case s of
+    Bool _        -> TBool
+    Inv _         -> TBool
+    And _ _       -> TBool
+    Or _ _        -> TBool
+    Xor _ _       -> TBool
+    Int _         -> TInt
+    Neg _         -> TInt
+    Div _ _       -> TInt
+    Mod _ _       -> TInt
+    Plus _ _      -> TInt
+    Times _ _     -> TInt
+    Gte _ _       -> TBool
+    Equal _ _     -> TBool
+    If _ _ _      -> TInt
+    DelayBool _ _ -> TBool
+    DelayInt  _ _ -> TInt
+    VarBool _     -> TBool
+    VarInt  _     -> TInt

@@ -2,9 +2,9 @@
              DeriveTraversable,MultiParamTypeClasses,
              FlexibleInstances,ScopedTypeVariables #-}
 module Lava.Signal (Signal(..),Symbol(..),S(..),symbol,unsymbol,
-                    bool,inv,andl,orl,xorl,varBool,delayBool,
-                    int,neg,divide,modulo,plusl,timesl,gteInt,
-                    equall,ifInt,
+                    bool,inv,and2,or2,xor2,varBool,delayBool,
+                    int,neg,divide,modulo,plus,times,gteInt,
+                    ifInt,
                     varInt,delayInt,
                     high,low,ifBool,equalBool,equalInt,
                     eval
@@ -14,7 +14,6 @@ where
 import Prelude hiding (sequence,any,sum,product,all,and,or,foldl)
 import Data.Traversable
 import Data.Foldable
-import Data.List(nub)
 import Lava.Ref
 import Lava.Error
 ----------------------------------------------------------------
@@ -29,9 +28,9 @@ newtype Symbol
 data S s
   = Bool      Bool
   | Inv       s
-  | And       [s]
-  | Or        [s]
-  | Xor       [s]
+  | And       s s
+  | Or        s s
+  | Xor       s s
   | VarBool   String
   | DelayBool s s
 
@@ -39,10 +38,10 @@ data S s
   | Neg      s
   | Div      s s
   | Mod      s s
-  | Plus     [s]
-  | Times    [s]
+  | Plus     s s
+  | Times    s s
   | Gte      s s
-  | Equal    [s]
+  | Equal    s s
   | If       s s s
   | VarInt   String
   | DelayInt s s
@@ -71,14 +70,14 @@ bool b = lift0 (Bool b)
 inv :: Signal Bool -> Signal Bool
 inv = lift1 Inv
 
-andl :: [Signal Bool] -> Signal Bool
-andl = liftl And
+and2 :: (Signal Bool,Signal Bool) -> Signal Bool
+and2  (x , y) = lift2 And x y
 
-orl :: [Signal Bool] -> Signal Bool
-orl  = liftl Or
+or2 :: (Signal Bool,Signal Bool) -> Signal Bool
+or2  (x , y) = lift2 Or x y
 
-xorl :: [Signal Bool] -> Signal Bool
-xorl = liftl Xor
+xor2 :: (Signal Bool,Signal Bool) -> Signal Bool
+xor2 (x , y) = lift2 Xor x y
 
 varBool :: String -> Signal Bool
 varBool s = lift0 (VarBool s)
@@ -98,17 +97,17 @@ divide = lift2 Div
 modulo :: Signal Int -> Signal Int -> Signal Int
 modulo = lift2 Mod
 
-plusl :: [Signal Int] -> Signal Int
-plusl  = liftl Plus
+plus :: (Signal Int,Signal Int) -> Signal Int
+plus (x , y) = lift2 Plus x y
 
-timesl :: [Signal Int] -> Signal Int
-timesl = liftl Times
+times :: (Signal Int , Signal Int) -> Signal Int
+times (x , y) = lift2 Times x y
 
 gteInt :: Signal Int -> Signal Int -> Signal Bool
 gteInt = lift2 Gte
 
-equall :: [Signal Int] -> Signal Bool
-equall = liftl Equal
+equal2 :: (Signal Int , Signal Int) -> Signal Bool
+equal2 (x , y) = lift2 Equal x y
 
 ifInt :: Signal Bool -> (Signal Int, Signal Int) -> Signal a
 ifInt c (x,y) = lift3 If c x y
@@ -135,9 +134,6 @@ lift3 :: (Symbol -> Symbol -> Symbol -> S Symbol)
       -> Signal a -> Signal b -> Signal c -> Signal d
 lift3 oper (Signal a) (Signal b) (Signal c) = Signal (symbol (oper a b c))
 
-liftl :: ([Symbol] -> S Symbol) -> [Signal a] -> Signal c
-liftl oper sigas = Signal (symbol (oper (map (\(Signal a) -> a) sigas)))
-
 ----------------------------------------------------------------
 -- smart constructors
 
@@ -148,13 +144,13 @@ high :: Signal Bool
 high = bool True
 
 ifBool :: Signal Bool -> (Signal Bool, Signal Bool) -> Signal Bool
-ifBool c (x,y) = orl[andl[c,x],andl[inv c,y]]
+ifBool c (x,y) = or2(and2(c,x),and2(inv c,y))
 
 equalBool :: Signal Bool -> Signal Bool -> Signal Bool
-equalBool x y = inv (xorl [x,y])
+equalBool x y = inv (xor2 (x,y))
 
 equalInt :: Signal Int -> Signal Int -> Signal Bool
-equalInt x y = equall [x,y]
+equalInt x y = equal2 (x,y)
 
 
 ----------------------------------------------------------------
@@ -189,26 +185,23 @@ liftF2 f x y = coLift (f (lift x) (lift y))
 liftF3 :: (Lift a e , Lift b e , Lift c e , CoLift d e) => (a -> b -> c -> d) -> S e -> S e -> S e -> S e
 liftF3 f x y z = coLift (f (lift x) (lift y) (lift z))
 
-liftFL :: (CoLift b c , Lift a c) => ([a] -> b) -> [S c] -> S c
-liftFL f = coLift . f . fmap lift
-
 eval :: S (S a) -> S a
 eval s =
   case s of
     Bool b       -> coLift b
     Inv  b       -> liftF1 not b
-    And xs       -> liftFL and xs
-    Or xs        -> liftFL or  xs
-    Xor xs       -> liftFL ((1 ==) . length . filter id) xs
+    And  x y     -> liftF2 (&&) x y
+    Or   x y     -> liftF2 (||) x y
+    Xor  x y     -> liftF2 (\ m n -> if m then not n else n) x y
 
     Int n        -> coLift n
     Neg n        -> liftF1 (negate :: Int -> Int) n
-    Div n1 n2    -> liftF2 (div :: Int -> Int -> Int) n1 n2
-    Mod n1 n2    -> liftF2 (mod :: Int -> Int -> Int) n1 n2
-    Plus xs      -> liftFL (sum :: [Int] -> Int) xs
-    Times xs     -> liftFL (product :: [Int] -> Int) xs
+    Div n1 n2    -> liftF2 (div  :: Int -> Int -> Int) n1 n2
+    Mod n1 n2    -> liftF2 (mod  :: Int -> Int -> Int) n1 n2
+    Plus x y     -> liftF2 ((+)  :: Int -> Int -> Int) x y
+    Times x y    -> liftF2 ((*)  :: Int -> Int -> Int) x y
     Gte n1 n2    -> liftF2 ((>=) :: Int -> Int -> Bool) n1 n2
-    Equal xs     -> liftFL (((<= 1) . length  . nub)  :: [Int] -> Bool) xs
+    Equal x y    -> liftF2 ((==) :: Int -> Int -> Bool) x y
     If l m n     -> liftF3 ((\ x y z -> if x then y else z) :: Bool -> Int -> Int -> Int) l m n
 
     DelayBool _ _ -> wrong Lava.Error.DelayEval
@@ -224,33 +217,7 @@ instance Show Symbol where
   showsPrec n sym =
     showsPrec n (unsymbol sym)
 
-instance Show a => Show (S a) where
-  showsPrec n s =
-    case s of
-      Bool True  -> showString "high"
-      Bool False -> showString "low"
-
-      Inv x      -> showString "inv"  . showList [x]
-      And xs     -> showString "andl" . showList xs
-      Or  xs     -> showString "orl"  . showList xs
-      Xor xs     -> showString "xorl" . showList xs
-
-      Int   i    -> showsPrec n i
-      Neg   x    -> showString "-" . showsPrec n x
-      Div   x y  -> showString "idiv" . showList [x,y]
-      Mod   x y  -> showString "imod" . showList [x,y]
-      Plus  xs   -> showString "plusl" . showList xs
-      Times xs   -> showString "timesl" . showList xs
-      Gte   x y  -> showString "gte" . showList [x,y]
-      Equal xs   -> showString "equall" . showList xs
-      If x y z   -> showString "ifThenElse" . showList [x,y,z]
-
-      DelayBool x y -> showString "delay" . showList [x,y]
-      DelayInt  x y -> showString "delay" . showList [x,y]
-
-      VarBool s'    -> showString s'
-      VarInt  s'    -> showString s'
-
+deriving instance Show a => Show (S a )
 
 ----------------------------------------------------------------
 -- the end.

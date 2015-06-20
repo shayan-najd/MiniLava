@@ -111,17 +111,17 @@ ops s =
   case unsymbol s of
     Bool _        -> opsBool
     Inv _         -> opsBool
-    And _         -> opsBool
-    Or _          -> opsBool
-    Xor _         -> opsBool
+    And _ _       -> opsBool
+    Or _ _        -> opsBool
+    Xor _ _       -> opsBool
     Int _         -> opsInt
     Neg _         -> opsInt
     Div _ _       -> opsInt
     Mod _ _       -> opsInt
-    Plus _        -> opsInt
-    Times _       -> opsInt
+    Plus _ _      -> opsInt
+    Times _ _     -> opsInt
     Gte _ _       -> opsBool
-    Equal _       -> opsBool
+    Equal _ _     -> opsBool
     If _ _ _      -> opsInt
     DelayBool _ _ -> opsBool
     DelayInt  _ _ -> opsInt
@@ -139,7 +139,7 @@ equal (x, y) = eq (struct x) (struct y)
   eq _             _             = low
 
   eqs []     []     = high
-  eqs (a:as) (b:bs) = andl [eq a b, eqs as bs]
+  eqs (a:as) (b:bs) = and2 (eq a b, eqs as bs)
   eqs _      _      = low
 
 delay :: Generic a => a -> a -> a

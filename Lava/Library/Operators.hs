@@ -14,14 +14,6 @@ infixr 1 |->
 ----------------------------------------------------------------------
 -- Gates
 
-and2 :: (Signal Bool, Signal Bool) -> Signal Bool
-and2 (x, y) = andl [x, y]
-
-or2 :: (Signal Bool, Signal Bool) -> Signal Bool
-or2  (x, y) = orl  [x, y]
-
-xor2 :: (Signal Bool, Signal Bool) -> Signal Bool
-xor2 (x, y) = xorl [x, y]
 
 nand2 :: (Signal Bool, Signal Bool) -> Signal Bool
 nand2 = inv . and2
@@ -38,20 +30,8 @@ equiv (x, y) = xnor2 (x, y)
 impl :: (Signal Bool, Signal Bool) -> Signal Bool
 impl  (x, y) = or2   (inv x, y)
 
-nandl :: [Signal Bool] -> Signal Bool
-nandl = inv . andl
-
-norl :: [Signal Bool] -> Signal Bool
-norl  = inv . orl
-
-plus :: (Signal Int, Signal Int) -> Signal Int
-plus  (x, y) = plusl [x,y]
-
 sub :: (Signal Int, Signal Int) -> Signal Int
-sub   (x, y) = plusl [x, neg y]
-
-times :: (Signal Int, Signal Int) -> Signal Int
-times (x, y) = timesl [x, y]
+sub   (x, y) = plus (x, - y)
 
 imod :: (Signal Int, Signal Int) -> Signal Int
 imod  (x, y) = modulo x y

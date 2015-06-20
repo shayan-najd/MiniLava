@@ -91,45 +91,19 @@ writeDefinitions name inp out out' =
   inps  = sigs inp
   outs' = sigs out'
 
-define :: [Char] -> S [Char] -> Writer String ()
+define :: String -> S String -> Writer String ()
 define v s =
            case s of
-             Bool True     -> port "vdd"  []
-             Bool False    -> port "gnd"  []
-             Inv x         -> port "inv"  [x]
-
-             And []        -> define v (Bool True)
-             And [x]       -> port "id"   [x]
-             And [x,y]     -> port "and2" [x,y]
-             And (x:xs)    -> define (w 0) (And xs)
-                           >> define v (And [x,w 0])
-
-             Or  []        -> define v (Bool False)
-             Or  [x]       -> port "id"   [x]
-             Or  [x,y]     -> port "or2"  [x,y]
-             Or  (x:xs)    -> define (w 0) (Or xs)
-                           >> define v (Or [x,w 0])
-
-             Xor  []       -> define v (Bool False)
-             Xor  [x]      -> port "id"   [x]
-             Xor  [x,y]    -> port "xor2" [x,y]
-             Xor  (x:xs)   -> define (w 0) (Or xs)
-                           >> define (w 1) (Inv (w 0))
-                           >> define (w 2) (And [x, w 1])
-
-                           >> define (w 3) (Inv x)
-                           >> define (w 4) (Xor xs)
-                           >> define (w 5) (And [w 3, w 4])
-                           >> define v     (Or [w 2, w 5])
-
-             VarBool s'    -> port "id" [s']
+             Bool True     -> port "vdd"   []
+             Bool False    -> port "gnd"   []
+             Inv x         -> port "inv"   [x]
+             And x y       -> port "and2"  [x,y]
+             Or  x y       -> port "or2"   [x,y]
+             Xor x y       -> port "xor2"  [x,y]
+             VarBool s'    -> port "id"    [s']
              DelayBool x y -> port "delay" [x, y]
-
              _             -> wrong Lava.Error.NoArithmetic
            where
-            w :: Integer -> String
-            w i = v ++ "_" ++ show i
-
             port name' args =
               do tell $
                       "  "

@@ -142,14 +142,14 @@ equal (x, y) = eq (struct x) (struct y)
   eqs (a:as) (b:bs) = and2 (eq a b, eqs as bs)
   eqs _      _      = low
 
-delay :: Generic a => a -> a -> a
-delay x y = construct (del (struct x) (struct y))
+delay :: Struct Symbol -> Struct Symbol -> Struct Symbol
+delay x y = del x y
  where
   del (Object a)    ~(Object b)    = Object (delaySymbol (ops a) a b)
   del (Compound as) ~(Compound bs) = Compound (lazyZipWith del as bs)
 
-symbolize :: Generic a => String -> a -> a
-symbolize s x = construct (sym s (struct x))
+symbolize :: String -> Struct Symbol -> Struct Symbol
+symbolize s x = sym s x
  where
   sym s' (Object a)    = Object (varSymbol (ops a) s')
   sym s' (Compound as) = Compound [ sym (s' ++ "_" ++ show i) a

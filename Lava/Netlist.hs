@@ -1,6 +1,5 @@
 module Lava.Netlist
   ( netgraph
-  , netgraphF
   )
  where
 
@@ -50,11 +49,7 @@ gather tab findM extendM new define (Symbol sym) =
                               define v s
                               return v
 
-netgraphF :: (Constructive a,Generic b) =>
-            (a -> b) -> ([(Integer,S Integer)] , Struct Integer)
-netgraphF f = netgraph (f (var "inp"))
-
-netgraph :: Generic a => a -> ([(Integer, S Integer)], Struct Integer)
+netgraph :: Struct Symbol -> ([(Integer, S Integer)], Struct Integer)
 netgraph s = runST $
              do counter <- newSTRef 0
                 nodes   <- newSTRef []
@@ -65,7 +60,7 @@ netgraph s = runST $
                                return n')
                            (\ v ss -> do l <- readSTRef nodes
                                          writeSTRef nodes (l ++ [(v,ss)]))
-                           (struct $ s)
+                           s
                 ns <- readSTRef nodes
                 return (ns , rs)
 

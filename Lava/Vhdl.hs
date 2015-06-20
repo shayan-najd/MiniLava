@@ -1,5 +1,5 @@
 module Lava.Vhdl
-  (vhdl
+  (compile
   )
  where
 
@@ -17,17 +17,16 @@ import Data.List
 ----------------------------------------------------------------
 -- write vhdl
 
-vhdl :: (Constructive a, Generic b) => String -> (a -> b) -> String
-vhdl name circ = let inp = var "inp"
-                     out = circ inp
-                 in  writeDefinitions name inp out
+compile :: (Constructive a, Generic b) => (a -> b) -> String
+compile circ = let inp = var "inp"
+                   out = struct (circ inp)
+               in  writeDefinitions "program" (struct inp) out
                      (symbolize "outp" out)
 
 ----------------------------------------------------------------
 -- definitions
 
-writeDefinitions :: (Generic a, Generic b)
-                 => String -> a -> b -> b -> String
+writeDefinitions :: String -> Struct Symbol -> Struct Symbol -> Struct Symbol -> String
 writeDefinitions name inp out out' =
   let (g , o)  = netgraph out
       outvs = fmap w o
@@ -86,7 +85,7 @@ writeDefinitions name inp out out' =
        ]
  where
   w x ="w" ++ show x
-  sigs x = map unsymbol . toList . struct $ x
+  sigs x = map unsymbol . toList $ x
 
   inps  = sigs inp
   outs' = sigs out'

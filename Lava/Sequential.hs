@@ -1,5 +1,5 @@
 module Lava.Sequential
-  ( simulateSeq
+  ( evaluate
   )
  where
 
@@ -36,11 +36,11 @@ data Wire s
 ----------------------------------------------------------------
 -- simulate
 
-lookupFrom :: Eq a => [(a , b)] -> a -> b
-lookupFrom xys x = let Just y = lookup x xys
-                   in  y
+evaluate :: (Constructive a , Generic a, Generic b) => (a -> b) -> [a] -> [b]
+evaluate circ inps = fmap construct $
+                      simulateSeq (struct . circ . construct) (fmap struct inps)
 
-simulateSeq :: (Constructive a , Generic a, Generic b) => (a -> b) -> [a] -> [b]
+simulateSeq :: (Struct Symbol -> Struct Symbol) -> [Struct Symbol] -> [Struct Symbol]
 simulateSeq _    []   = []
 simulateSeq circ inps = runST (
   do
@@ -59,7 +59,7 @@ simulateSeq circ inps = runST (
      outs <- lazyloop $
        do step
           s <- traverse (fmap symbol . readSTRef . fst) sr
-          return (construct s)
+          return s
 
      return (takes inps outs))
 
@@ -101,6 +101,9 @@ delay' roots r ri@(rinit,_) r1@(pre,_) =
           writeSTRef state (Just s')
           return s'
 
+lookupFrom :: Eq a => [(a , b)] -> a -> b
+lookupFrom xys x = let Just y = lookup x xys
+                   in  y
 
 -- evaluation order
 
@@ -137,7 +140,7 @@ lazyloop m =
      as <- unsafeInterleaveST (lazyloop m)
      return (a:as)
 
-input :: Generic a => [a] -> a
+input :: [Struct Symbol] -> Struct Symbol
 input xs = out
  where
   out = foldr delay out xs
@@ -150,3 +153,5 @@ takes (_:xs) (y:ys) = y : takes xs ys
 
 ----------------------------------------------------------------
 -- the end.
+
+-- normalisation higher-order programs = defuncionalisation =

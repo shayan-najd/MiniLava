@@ -99,13 +99,20 @@ equal x y = eq (struct x) (struct y)
   eqs _      _      = low
 
 delay :: Generic a => a -> a -> a
-delay x y = construct (del (struct x) (struct y))
+delay xx yy = construct (del (struct xx) (struct yy))
  where
   del (Object a)    ~(Object b)    = Object $
                                      case getTyp $ unsymbol a of
     TBool -> unSignal $ delayBool (Signal a) (Signal b)
     TInt  -> unSignal $ delayInt  (Signal a) (Signal b)
   del (Compound as) ~(Compound bs) = Compound (lazyZipWith del as bs)
+    where
+      lazyZipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+      lazyZipWith _ []     _  = []
+      lazyZipWith f (x:xs) ys = f x (safe head ys) : lazyZipWith f xs (safe tail ys)
+        where
+          safe _  []  = wrong Lava.Error.IncompatibleStructures
+          safe f' xs' = f' xs'
 
 zeroize :: Generic a => a -> a
 zeroize x = construct (zro (struct x))
@@ -196,12 +203,6 @@ instance Choice b => Choice (a -> b) where
 mux :: Generic a => Signal Bool -> a -> a -> a
 mux c a b = ifThenElse c b a
 
-lazyZipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-lazyZipWith _ []     _  = []
-lazyZipWith f (x:xs) ys = f x (safe head ys) : lazyZipWith f xs (safe tail ys)
- where
-  safe _  []  = wrong Lava.Error.IncompatibleStructures
-  safe f' xs' = f' xs'
 
 ----------------------------------------------------------------
 -- the end.

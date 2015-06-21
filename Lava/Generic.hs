@@ -1,6 +1,6 @@
 {-# LANGUAGE StandaloneDeriving,DeriveFoldable,DeriveTraversable,DeriveFunctor,FlexibleInstances #-}
 module Lava.Generic
-  (Struct(..),Constructive(..),Generic(..),equal,delay,zeroize,symbolize,ifThenElse,mux) where
+  (Struct(..),Constructive(..),Generic(..),equal,delay,ifThenElse,mux) where
 
 import Prelude hiding (concatMap)
 import Data.Traversable
@@ -163,25 +163,6 @@ delay xx yy = construct (del (struct xx) (struct yy))
         where
           safe _  []  = wrong Lava.Error.IncompatibleStructures
           safe f' xs' = f' xs'
-
-zeroize :: Generic a => a -> a
-zeroize x = construct (zro (struct x))
- where
-  zro :: Struct Symbol -> Struct Symbol
-  zro (Object a) = case getTyp $ unsymbol a of
-    TBool -> Object (symbol (Bool False))
-    TInt  -> Object (symbol (Int 0))
-  zro (Compound as) = Compound [zro a | a <- as]
-
-symbolize :: Generic a => String -> a -> a
-symbolize s x = construct (sym s (struct x))
- where
-  sym s' (Object a)    = Object $ case getTyp $ unsymbol a of
-    TBool -> symbol (VarBool s')
-    TInt  -> symbol (VarInt s')
-  sym s' (Compound as) = Compound [ sym (s' ++ "_" ++ show i) a
-                                  | (a,i) <- as `zip` [0:: Integer ..]
-                                  ]
 
 ifThenElse :: Generic a => Signal Bool -> a -> a -> a
 ifThenElse c x y  = construct (iff (struct x) (struct y))

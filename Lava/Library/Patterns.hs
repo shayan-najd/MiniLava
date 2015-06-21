@@ -111,22 +111,22 @@ tri :: (a -> a) -> [a] -> [a]
 tri _    []         = []
 tri circ (inp:inps) = inp : (map circ ->- tri circ) inps
 
-mirror :: ((a, b) -> (d, c)) -> (b, a) -> (c, d)
-mirror circ (a, b) = (c, d)
+mirror :: (a -> b -> (d, c)) -> b -> a -> (c, d)
+mirror circ a b = (c, d)
   where
-    (d, c) = circ (b, a)
+    (d, c) = circ b a
 
-row :: ((a, b) -> (c, a)) -> (a, [b]) -> ([c], a)
-row _    (carryIn, [])   = ([], carryIn)
-row circ (carryIn, a:as) = (b:bs, carryOut)
+row :: (a -> b -> (c, a)) -> a -> [b] -> ([c], a)
+row _    carryIn []     = ([], carryIn)
+row circ carryIn (a:as) = (b:bs, carryOut)
   where
-    (b, carry)     = circ (carryIn, a)
-    (bs, carryOut) = row circ (carry, as)
+    (b, carry)     = circ carryIn a
+    (bs, carryOut) = row circ carry as
 
-column :: ((c, a) -> (a, b)) -> ([c], a) -> (a, [b])
+column :: (c -> a -> (a, b)) -> [c] -> a -> (a, [b])
 column circ = mirror (row (mirror circ))
 
-grid :: ((a, b) -> (b, a)) -> ([a], [b]) -> ([b], [a])
+grid :: (a -> b -> (b, a)) -> [a] -> [b] -> ([b], [a])
 grid circ = row (column circ)
 
 ----------------------------------------------------------------

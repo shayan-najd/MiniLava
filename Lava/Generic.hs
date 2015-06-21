@@ -83,6 +83,56 @@ instance (Generic a, Generic b, Generic c, Generic d, Generic e, Generic f, Gene
   construct _                          = undefined
 
 ----------------------------------------------------------------
+-- Constructive
+
+class Generic a => Constructive a where
+  zero   :: a
+  var    :: String -> a
+
+instance  Constructive (Signal Bool) where
+  zero   = low
+  var    = varBool
+
+instance  Constructive (Signal Int) where
+  zero   = int 0
+  var    = varInt
+
+instance Constructive () where
+  zero       = ()
+  var _      = ()
+
+instance (Constructive a, Constructive b)
+      => Constructive (a, b) where
+  zero       = (zero, zero)
+  var s      = (var (s ++ "_1"), var (s ++ "_2"))
+
+instance (Constructive a, Constructive b, Constructive c)
+      => Constructive (a, b, c) where
+  zero     = (zero, zero, zero)
+  var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"))
+
+instance (Constructive a, Constructive b, Constructive c, Constructive d)
+      => Constructive (a, b, c, d) where
+  zero     = (zero, zero, zero, zero)
+  var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"))
+
+instance (Constructive a, Constructive b, Constructive c, Constructive d, Constructive e)
+      => Constructive (a, b, c, d, e) where
+  zero     = (zero, zero, zero, zero, zero)
+  var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"))
+
+instance (Constructive a, Constructive b, Constructive c, Constructive d, Constructive e, Constructive f)
+      => Constructive (a, b, c, d, e, f) where
+  zero     = (zero, zero, zero, zero, zero, zero)
+  var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"), var (s ++ "_6"))
+
+instance (Constructive a, Constructive b, Constructive c, Constructive d, Constructive e, Constructive f, Constructive g)
+      => Constructive (a, b, c, d, e, f, g) where
+  zero     = (zero, zero, zero, zero, zero, zero, zero)
+  var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"), var (s ++ "_6"), var (s ++ "_7"))
+
+
+----------------------------------------------------------------
 -- generic definitions
 
 equal :: Generic a => a -> a -> Signal Bool
@@ -144,54 +194,6 @@ ifThenElse c x y  = construct (iff (struct x) (struct y))
                 | (a , b) <- zip as bs]
      iff _             _             = error "Bad Conditional"
 
-----------------------------------------------------------------
--- Constructive
-
-class Generic a => Constructive a where
-  zero   :: a
-  var    :: String -> a
-
-instance  Constructive (Signal Bool) where
-  zero   = low
-  var    = varBool
-
-instance  Constructive (Signal Int) where
-  zero   = int 0
-  var    = varInt
-
-instance Constructive () where
-  zero       = ()
-  var _      = ()
-
-instance (Constructive a, Constructive b)
-      => Constructive (a, b) where
-  zero       = (zero, zero)
-  var s      = (var (s ++ "_1"), var (s ++ "_2"))
-
-instance (Constructive a, Constructive b, Constructive c)
-      => Constructive (a, b, c) where
-  zero     = (zero, zero, zero)
-  var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"))
-
-instance (Constructive a, Constructive b, Constructive c, Constructive d)
-      => Constructive (a, b, c, d) where
-  zero     = (zero, zero, zero, zero)
-  var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"))
-
-instance (Constructive a, Constructive b, Constructive c, Constructive d, Constructive e)
-      => Constructive (a, b, c, d, e) where
-  zero     = (zero, zero, zero, zero, zero)
-  var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"))
-
-instance (Constructive a, Constructive b, Constructive c, Constructive d, Constructive e, Constructive f)
-      => Constructive (a, b, c, d, e, f) where
-  zero     = (zero, zero, zero, zero, zero, zero)
-  var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"), var (s ++ "_6"))
-
-instance (Constructive a, Constructive b, Constructive c, Constructive d, Constructive e, Constructive f, Constructive g)
-      => Constructive (a, b, c, d, e, f, g) where
-  zero     = (zero, zero, zero, zero, zero, zero, zero)
-  var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"), var (s ++ "_6"), var (s ++ "_7"))
 
 {-
 

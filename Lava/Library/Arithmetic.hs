@@ -8,51 +8,51 @@ import Lava.Library.Operators
 ----------------------------------------------------------------
 -- Basic Components
 
-halfAdd :: (Signal Bool, Signal Bool) -> (Signal Bool, Signal Bool)
-halfAdd (a, b) = (sum, carry)
+halfAdd :: Signal Bool -> Signal Bool -> (Signal Bool, Signal Bool)
+halfAdd a b = (sum, carry)
   where
     sum   = xor2 a b
     carry = and2 a b
 
-fullAdd :: (Signal Bool, (Signal Bool, Signal Bool))
-                 -> (Signal Bool, Signal Bool)
-fullAdd (carryIn, (a, b)) = (sum, carryOut)
+fullAdd :: Signal Bool -> Signal Bool -> Signal Bool ->
+           (Signal Bool, Signal Bool)
+fullAdd carryIn a b = (sum, carryOut)
   where
-    (sum1, carry1) = halfAdd (a, b)
-    (sum, carry2)  = halfAdd (carryIn, sum1)
+    (sum1, carry1) = halfAdd a b
+    (sum, carry2)  = halfAdd carryIn sum1
     carryOut       = xor2 carry1 carry2
 
-bitAdder :: (Signal Bool, [Signal Bool])
-                  -> ([Signal Bool], Signal Bool)
+bitAdder :: Signal Bool -> [Signal Bool] ->
+            ([Signal Bool], Signal Bool)
 bitAdder = row halfAdd
 
-adder :: (Signal Bool, ([Signal Bool], [Signal Bool]))
-               -> ([Signal Bool], Signal Bool)
-adder (carryIn, ([],   []))   = ([], carryIn)
-adder (carryIn, (as,   []))   = bitAdder (carryIn, as)
-adder (carryIn, ([],   bs))   = bitAdder (carryIn, bs)
-adder (carryIn, (a:as, b:bs)) = (s:ss, carryOut)
+adder :: Signal Bool -> [Signal Bool] -> [Signal Bool] ->
+         ([Signal Bool], Signal Bool)
+adder carryIn []     []     = ([], carryIn)
+adder carryIn as     []     = bitAdder carryIn as
+adder carryIn []     bs     = bitAdder carryIn bs
+adder carryIn (a:as) (b:bs) = (s:ss , carryOut)
   where
-    (s, carry)     = fullAdd (carryIn, (a, b))
-    (ss, carryOut) = adder (carry, (as, bs))
+    (s, carry)     = fullAdd carryIn a b
+    (ss, carryOut) = adder carry as bs
 
-binAdder :: ([Signal Bool], [Signal Bool]) -> [Signal Bool]
-binAdder (as, bs) = sum ++ [carryOut]
+binAdder :: [Signal Bool] -> [Signal Bool] -> [Signal Bool]
+binAdder as bs = sum ++ [carryOut]
   where
-    (sum, carryOut) = adder (low, (as, bs))
+    (sum, carryOut) = adder low as bs
 
-bitMulti :: (Signal Bool, [Signal Bool]) -> [Signal Bool]
-bitMulti (a, bs) = [ and2 a b | b <- bs ]
+bitMulti :: Signal Bool -> [Signal Bool] -> [Signal Bool]
+bitMulti a bs = [and2 a b | b <- bs ]
 
-multi :: ([Signal Bool], [Signal Bool]) -> [Signal Bool]
-multi ([],   []) = []
-multi (as,   []) = replicate (length as) low
-multi ([],   bs) = replicate (length bs) low
-multi (a:as, bs) = m : ms
+multi :: [Signal Bool] -> [Signal Bool] -> [Signal Bool]
+multi []     [] = []
+multi as     [] = replicate (length as) low
+multi []     bs = replicate (length bs) low
+multi (a:as) bs = m : ms
   where
-    (m:abs) = bitMulti (a, bs)
-    asbs    = multi (as, bs)
-    (ms,_)  = adder (low, (abs, asbs))
+    (m:abs) = bitMulti a bs
+    asbs    = multi as bs
+    (ms,_)  = adder low abs asbs
 
 numBreak :: Signal Int -> (Signal Bool, Signal Int)
 numBreak num = (bit, num')

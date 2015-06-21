@@ -36,7 +36,7 @@ data Wire s
 ----------------------------------------------------------------
 -- simulate
 
-evaluate :: (Constructive a , Generic a, Generic b) => (a -> b) -> [a] -> [b]
+evaluate :: (Generic a, Generic b) => (a -> b) -> [a] -> [b]
 evaluate circ inps = fmap construct $
                       simulateSeq (struct . circ . construct) (fmap struct inps)
 

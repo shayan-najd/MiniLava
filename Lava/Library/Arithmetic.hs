@@ -11,8 +11,8 @@ import Lava.Library.Operators
 halfAdd :: (Signal Bool, Signal Bool) -> (Signal Bool, Signal Bool)
 halfAdd (a, b) = (sum, carry)
   where
-    sum   = xor2 (a, b)
-    carry = and2 (a, b)
+    sum   = xor2 a b
+    carry = and2 a b
 
 fullAdd :: (Signal Bool, (Signal Bool, Signal Bool))
                  -> (Signal Bool, Signal Bool)
@@ -20,7 +20,7 @@ fullAdd (carryIn, (a, b)) = (sum, carryOut)
   where
     (sum1, carry1) = halfAdd (a, b)
     (sum, carry2)  = halfAdd (carryIn, sum1)
-    carryOut       = xor2 (carry1, carry2)
+    carryOut       = xor2 carry1 carry2
 
 bitAdder :: (Signal Bool, [Signal Bool])
                   -> ([Signal Bool], Signal Bool)
@@ -42,7 +42,7 @@ binAdder (as, bs) = sum ++ [carryOut]
     (sum, carryOut) = adder (low, (as, bs))
 
 bitMulti :: (Signal Bool, [Signal Bool]) -> [Signal Bool]
-bitMulti (a, bs) = [ and2 (a, b) | b <- bs ]
+bitMulti (a, bs) = [ and2 a b | b <- bs ]
 
 multi :: ([Signal Bool], [Signal Bool]) -> [Signal Bool]
 multi ([],   []) = []
@@ -57,9 +57,9 @@ multi (a:as, bs) = m : ms
 numBreak :: Signal Int -> (Signal Bool, Signal Int)
 numBreak num = (bit, num')
   where
-    digit = imod (num, 2)
+    digit = imod num 2
     bit   = int2bit digit
-    num'  = idiv (num, 2)
+    num'  = idiv num 2
 
 int2bin :: Int -> Signal Int -> [Signal Bool]
 int2bin 0 _   = []

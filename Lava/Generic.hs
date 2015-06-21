@@ -1,6 +1,6 @@
 {-# LANGUAGE StandaloneDeriving,DeriveFoldable,DeriveTraversable,DeriveFunctor,FlexibleInstances #-}
 module Lava.Generic
-  (Struct(..),Constructive(..),Generic(..),Choice(..),delay,symbolize,equal,mux) where
+  (Struct(..),Constructive(..),Generic(..),equal,delay,zeroize,symbolize,ifThenElse,mux) where
 
 import Prelude hiding (concatMap)
 import Data.Traversable
@@ -27,6 +27,10 @@ deriving instance Traversable Struct
 class Generic a where
   struct    :: a -> Struct Symbol
   construct :: Struct Symbol -> a
+
+instance Generic (Struct Symbol) where
+  struct    = id
+  construct = id
 
 instance Generic Symbol where
   struct    s          = Object s
@@ -77,53 +81,61 @@ instance (Generic a, Generic b, Generic c, Generic d, Generic e, Generic f, Gene
   struct    (a,b,c,d,e,f,g)            = Compound [struct a, struct b, struct c, struct d, struct e, struct f, struct g]
   construct (Compound [a,b,c,d,e,f,g]) = (construct a, construct b, construct c, construct d, construct e, construct f, construct g)
   construct _                          = undefined
-----------------------------------------------------------------
--- Ops
-
-
-equalSymbol :: Type -> Symbol -> Symbol -> Signal Bool
-equalSymbol TBool x y = equalBool (Signal x) (Signal y)
-equalSymbol TInt  x y = equalInt  (Signal x) (Signal y)
-
-delaySymbol :: Type -> Symbol -> Symbol -> Symbol
-delaySymbol TBool x y = unSignal $ delayBool (Signal x) (Signal y)
-delaySymbol TInt  x y = unSignal $ delayInt (Signal x) (Signal y)
-
-ifSymbol :: Type -> Signal Bool -> (Symbol, Symbol) -> Symbol
-ifSymbol TBool c (x , y) = unSignal $ ifBool c  (Signal x,  Signal y)
-ifSymbol TInt  c (x , y) = unSignal $ ifInt c  (Signal x,  Signal y)
-
-varSymbol :: Type -> String -> Symbol
-varSymbol TBool s  = symbol (VarBool s)
-varSymbol TInt  s  = symbol (VarInt s)
 
 ----------------------------------------------------------------
 -- generic definitions
 
-equal :: Generic a => (a, a) -> Signal Bool
-equal (x, y) = eq (struct x) (struct y)
+equal :: Generic a => a -> a -> Signal Bool
+equal x y = eq (struct x) (struct y)
  where
-  eq (Object a)    (Object b)    = equalSymbol (getType $ unsymbol a) a b
+  eq (Object a)    (Object b)    = case getTyp $ unsymbol a of
+    TBool -> equalBool (Signal a) (Signal b)
+    TInt  -> equalInt  (Signal a) (Signal b)
   eq (Compound as) (Compound bs) = eqs as bs
   eq _             _             = low
 
   eqs []     []     = high
-  eqs (a:as) (b:bs) = and2 (eq a b, eqs as bs)
+  eqs (a:as) (b:bs) = and2 (eq a b) (eqs as bs)
   eqs _      _      = low
 
-delay :: Struct Symbol -> Struct Symbol -> Struct Symbol
-delay x y = del x y
+delay :: Generic a => a -> a -> a
+delay x y = construct (del (struct x) (struct y))
  where
-  del (Object a)    ~(Object b)    = Object (delaySymbol (getType $ unsymbol a) a b)
+  del (Object a)    ~(Object b)    = Object $
+                                     case getTyp $ unsymbol a of
+    TBool -> unSignal $ delayBool (Signal a) (Signal b)
+    TInt  -> unSignal $ delayInt  (Signal a) (Signal b)
   del (Compound as) ~(Compound bs) = Compound (lazyZipWith del as bs)
 
-symbolize :: String -> Struct Symbol -> Struct Symbol
-symbolize s x = sym s x
+zeroize :: Generic a => a -> a
+zeroize x = construct (zro (struct x))
  where
-  sym s' (Object a)    = Object (varSymbol (getType $ unsymbol a) s')
+  zro :: Struct Symbol -> Struct Symbol
+  zro (Object a) = case getTyp $ unsymbol a of
+    TBool -> Object (symbol (Bool False))
+    TInt  -> Object (symbol (Int 0))
+  zro (Compound as) = Compound [zro a | a <- as]
+
+symbolize :: Generic a => String -> a -> a
+symbolize s x = construct (sym s (struct x))
+ where
+  sym s' (Object a)    = Object $ case getTyp $ unsymbol a of
+    TBool -> symbol (VarBool s')
+    TInt  -> symbol (VarInt s')
   sym s' (Compound as) = Compound [ sym (s' ++ "_" ++ show i) a
                                   | (a,i) <- as `zip` [0:: Integer ..]
                                   ]
+
+ifThenElse :: Generic a => Signal Bool -> a -> a -> a
+ifThenElse c x y  = construct (iff (struct x) (struct y))
+  where
+     iff (Object a) (Object b) = Object $ case getTyp $ unsymbol a of
+       TBool -> unSignal $ ifBool c (Signal a) (Signal b)
+       TInt  -> unSignal $ ifInt  c (Signal a) (Signal b)
+     iff (Compound as) (Compound bs) =
+       Compound [iff a b
+                | (a , b) <- zip as bs]
+     iff _             _             = error "Bad Conditional"
 
 ----------------------------------------------------------------
 -- Constructive
@@ -174,66 +186,15 @@ instance (Constructive a, Constructive b, Constructive c, Constructive d, Constr
   zero     = (zero, zero, zero, zero, zero, zero, zero)
   var s    = (var (s ++ "_1"), var (s ++ "_2"), var (s ++ "_3"), var (s ++ "_4"), var (s ++ "_5"), var (s ++ "_6"), var (s ++ "_7"))
 
-----------------------------------------------------------------
--- Choice
-
-class Choice a where
-  ifThenElse :: Signal Bool -> (a, a) -> a
-
-instance Choice Symbol where
-  ifThenElse cond (x, y) = ifSymbol (getType $ unsymbol x) cond (x, y)
-
-instance Choice (Signal a) where
-  ifThenElse cond (Signal x, Signal y) =
-    Signal (ifThenElse cond (x, y))
-
-instance Choice () where
-  ifThenElse _ (_, _) = ()
-
-instance Choice a => Choice [a] where
-  ifThenElse cond (xs, ys) =
-    strongZipWith (curry (ifThenElse cond)) xs ys
-
-instance (Choice a, Choice b) => Choice (a,b) where
-  ifThenElse cond ((x1,x2),(y1,y2)) =
-    (ifThenElse cond (x1,y1), ifThenElse cond (x2,y2))
-
-instance (Choice a, Choice b, Choice c) => Choice (a,b,c) where
-  ifThenElse cond ((x1,x2,x3),(y1,y2,y3)) =
-    (ifThenElse cond (x1,y1), ifThenElse cond (x2,y2), ifThenElse cond (x3,y3))
-
-instance (Choice a, Choice b, Choice c, Choice d) => Choice (a,b,c,d) where
-  ifThenElse cond ((x1,x2,x3,x4),(y1,y2,y3,y4)) =
-    (ifThenElse cond (x1,y1), ifThenElse cond (x2,y2), ifThenElse cond (x3,y3), ifThenElse cond (x4,y4))
-
-instance (Choice a, Choice b, Choice c, Choice d, Choice e) => Choice (a,b,c,d,e) where
-  ifThenElse cond ((x1,x2,x3,x4,x5),(y1,y2,y3,y4,y5)) =
-    (ifThenElse cond (x1,y1), ifThenElse cond (x2,y2), ifThenElse cond (x3,y3), ifThenElse cond (x4,y4), ifThenElse cond (x5,y5))
-
-instance (Choice a, Choice b, Choice c, Choice d, Choice e, Choice f) => Choice (a,b,c,d,e,f) where
-  ifThenElse cond ((x1,x2,x3,x4,x5,x6),(y1,y2,y3,y4,y5,y6)) =
-    (ifThenElse cond (x1,y1), ifThenElse cond (x2,y2), ifThenElse cond (x3,y3), ifThenElse cond (x4,y4), ifThenElse cond (x5,y5),
-     ifThenElse cond (x6,y6))
-
-instance (Choice a, Choice b, Choice c, Choice d, Choice e, Choice f, Choice g) => Choice (a,b,c,d,e,f,g) where
-  ifThenElse cond ((x1,x2,x3,x4,x5,x6,x7),(y1,y2,y3,y4,y5,y6,y7)) =
-    (ifThenElse cond (x1,y1), ifThenElse cond (x2,y2), ifThenElse cond (x3,y3), ifThenElse cond (x4,y4), ifThenElse cond (x5,y5),
-     ifThenElse cond (x6,y6), ifThenElse cond (x7,y7))
+{-
 
 instance Choice b => Choice (a -> b) where
   ifThenElse cond (f, g) =
     \a -> ifThenElse cond (f a, g a)
+-}
 
-mux :: Choice a => (Signal Bool, (a, a)) -> a
-mux (cond, (a, b)) = ifThenElse cond (b, a)
-
-----------------------------------------------------------------
--- helper functions
-
-strongZipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-strongZipWith f (x:xs) (y:ys) = f x y : strongZipWith f xs ys
-strongZipWith _ []     []     = []
-strongZipWith _ _      _      = wrong Lava.Error.IncompatibleStructures
+mux :: Generic a => Signal Bool -> a -> a -> a
+mux c a b = ifThenElse c b a
 
 lazyZipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
 lazyZipWith _ []     _  = []

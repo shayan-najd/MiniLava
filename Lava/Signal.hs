@@ -8,7 +8,7 @@ module Lava.Signal (Signal(..),Symbol(..),S(..),symbol,unsymbol,
                     varInt,delayInt,
                     high,low,ifBool,equalBool,equalInt,
                     eval,
-                    getType,Type(..)
+                    getTyp,Typ(..),Type(..)
                     )
 where
 
@@ -34,7 +34,6 @@ data S s
   | Xor       s s
   | VarBool   String
   | DelayBool s s
-
   | Int      Int
   | Neg      s
   | Div      s s
@@ -60,7 +59,7 @@ unsymbol (Symbol r) = deref r
 deriving instance Eq Symbol
 deriving instance Eq (Signal a)
 
-data Type = TBool | TInt
+data Typ =  TBool | TInt
 
 ----------------------------------------------------------------
 -- operations
@@ -68,28 +67,28 @@ data Type = TBool | TInt
 -- on bits
 
 bool :: Bool -> Signal Bool
-bool b = lift0 (Bool b)
+bool = lift0 . Bool
 
 inv :: Signal Bool -> Signal Bool
 inv = lift1 Inv
 
-and2 :: (Signal Bool,Signal Bool) -> Signal Bool
-and2  (x , y) = lift2 And x y
+and2 :: Signal Bool -> Signal Bool -> Signal Bool
+and2 = lift2 And
 
-or2 :: (Signal Bool,Signal Bool) -> Signal Bool
-or2  (x , y) = lift2 Or x y
+or2 :: Signal Bool -> Signal Bool -> Signal Bool
+or2  = lift2 Or
 
-xor2 :: (Signal Bool,Signal Bool) -> Signal Bool
-xor2 (x , y) = lift2 Xor x y
+xor2 :: Signal Bool -> Signal Bool -> Signal Bool
+xor2 = lift2 Xor
 
 varBool :: String -> Signal Bool
-varBool s = lift0 (VarBool s)
+varBool = lift0 . VarBool
 
 delayBool :: Signal Bool -> Signal Bool -> Signal Bool
 delayBool = lift2 DelayBool
 
 int :: Int -> Signal Int
-int n = lift0 (Int n)
+int = lift0 . Int
 
 neg :: Signal Int -> Signal Int
 neg = lift1 Neg
@@ -100,23 +99,23 @@ divide = lift2 Div
 modulo :: Signal Int -> Signal Int -> Signal Int
 modulo = lift2 Mod
 
-plus :: (Signal Int,Signal Int) -> Signal Int
-plus (x , y) = lift2 Plus x y
+plus :: Signal Int -> Signal Int -> Signal Int
+plus = lift2 Plus
 
-times :: (Signal Int , Signal Int) -> Signal Int
-times (x , y) = lift2 Times x y
+times :: Signal Int -> Signal Int -> Signal Int
+times = lift2 Times
 
 gteInt :: Signal Int -> Signal Int -> Signal Bool
 gteInt = lift2 Gte
 
-equal2 :: (Signal Int , Signal Int) -> Signal Bool
-equal2 (x , y) = lift2 Equal x y
+equal2 :: Signal Int -> Signal Int -> Signal Bool
+equal2 = lift2 Equal
 
-ifInt :: Signal Bool -> (Signal Int, Signal Int) -> Signal a
-ifInt c (x,y) = lift3 If c x y
+ifInt :: Signal Bool -> Signal Int -> Signal Int -> Signal a
+ifInt = lift3 If
 
 varInt :: String -> Signal Int
-varInt s = lift0 (VarInt s)
+varInt = lift0 . VarInt
 
 delayInt :: Signal Int -> Signal Int -> Signal Int
 delayInt = lift2 DelayInt
@@ -146,15 +145,14 @@ low  = bool False
 high :: Signal Bool
 high = bool True
 
-ifBool :: Signal Bool -> (Signal Bool, Signal Bool) -> Signal Bool
-ifBool c (x,y) = or2(and2(c,x),and2(inv c,y))
+ifBool :: Signal Bool -> Signal Bool -> Signal Bool -> Signal Bool
+ifBool c x y = or2 (and2 c x) (and2 (inv c) y)
 
 equalBool :: Signal Bool -> Signal Bool -> Signal Bool
-equalBool x y = inv (xor2 (x,y))
+equalBool x y = inv (xor2 x y)
 
 equalInt :: Signal Int -> Signal Int -> Signal Bool
-equalInt x y = equal2 (x,y)
-
+equalInt = equal2
 
 ----------------------------------------------------------------
 -- evaluate
@@ -196,7 +194,6 @@ eval s =
     And  x y     -> liftF2 (&&) x y
     Or   x y     -> liftF2 (||) x y
     Xor  x y     -> liftF2 (\ m n -> if m then not n else n) x y
-
     Int n        -> coLift n
     Neg n        -> liftF1 (negate :: Int -> Int) n
     Div n1 n2    -> liftF2 (div  :: Int -> Int -> Int) n1 n2
@@ -206,7 +203,6 @@ eval s =
     Gte n1 n2    -> liftF2 ((>=) :: Int -> Int -> Bool) n1 n2
     Equal x y    -> liftF2 ((==) :: Int -> Int -> Bool) x y
     If l m n     -> liftF3 ((\ x y z -> if x then y else z) :: Bool -> Int -> Int -> Int) l m n
-
     DelayBool _ _ -> wrong Lava.Error.DelayEval
     DelayInt  _ _ -> wrong Lava.Error.DelayEval
     VarBool   _   -> wrong Lava.Error.VarEval
@@ -225,8 +221,8 @@ deriving instance Show a => Show (S a )
 ----------------------------------------------------------------
 -- the end.
 
-getType :: S a -> Type
-getType s =
+getTyp :: S a -> Typ
+getTyp s =
   case s of
     Bool _        -> TBool
     Inv _         -> TBool
@@ -246,3 +242,12 @@ getType s =
     DelayInt  _ _ -> TInt
     VarBool _     -> TBool
     VarInt  _     -> TInt
+
+class Type a where
+  typ :: s a -> Typ
+
+instance Type Bool where
+  typ _ = TBool
+
+instance Type Int where
+  typ _ = TInt

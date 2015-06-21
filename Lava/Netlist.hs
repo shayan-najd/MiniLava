@@ -3,7 +3,6 @@ module Lava.Netlist
   )
  where
 
-import Lava.Generic
 import Control.Applicative
 import Data.Traversable
 import Lava.Ref
@@ -49,7 +48,7 @@ gather tab findM extendM new define (Symbol sym) =
                               define v s
                               return v
 
-netgraph :: Struct Symbol -> ([(Integer, S Integer)], Struct Integer)
+netgraph :: Traversable f => f Symbol -> ([(Integer, S Integer)], f Integer)
 netgraph s = runST $
              do counter <- newSTRef 0
                 nodes   <- newSTRef []

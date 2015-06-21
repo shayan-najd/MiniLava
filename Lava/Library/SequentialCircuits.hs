@@ -59,11 +59,11 @@ outputList sigs () = out
     out = foldr (|->) out sigs
 
 rowSeq ::  Constructive a =>
-           ((a , b) -> (c , a)) -> b -> c
+           (a  -> b -> (c , a)) -> b -> c
 rowSeq circ inp = out
   where
     carryIn         = delay zero carryOut
-    (out, carryOut) = circ (carryIn, inp)
+    (out, carryOut) = circ carryIn inp
 
 rowSeqReset :: Constructive a =>
                (a -> b -> (c, a)) -> Signal Bool -> b -> c
